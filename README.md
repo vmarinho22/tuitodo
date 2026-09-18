@@ -1,8 +1,9 @@
 # tuitodo
 
-Terminal todo app: parent tasks with one-level subtasks, categories,
-and a local SQLite database. The UI is a TUI (tview). Language follows
-the OS (en-US / pt-BR) and can be changed in the app.
+A local-first terminal todo app. Parent tasks, subtasks, and categories
+live on your machine — nothing is sent to a server, and you keep the data.
+
+Language follows the OS (en-US / pt-BR) and can be changed in the app.
 
 ## How to use
 
