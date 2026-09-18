@@ -24,6 +24,8 @@ var actionIDs = []string{"new-task", "new-category", "delete", "help", "quit"}
 type App struct {
 	application        *tview.Application
 	pages              *tview.Pages
+	tasksPane          *tview.Flex
+	taskModeLine       *tview.TextView
 	taskList           *tview.List
 	categoryList       *tview.List
 	subtasksPane       *tview.Flex
@@ -77,9 +79,25 @@ func Run(taskRepository store.TaskRepository, categoryRepository store.CategoryR
 }
 
 func (app *App) build() {
+	app.taskModeLine = tview.NewTextView().SetDynamicColors(true).SetWrap(false)
+	app.taskModeLine.SetText(taskModeLine(false))
 	app.taskList = tview.NewList().ShowSecondaryText(true).SetHighlightFullLine(true).SetWrapAround(true)
-	app.taskList.SetBorder(true)
+	app.tasksPane = tview.NewFlex().SetDirection(tview.FlexRow).
+		AddItem(app.taskModeLine, 1, 0, false).
+		AddItem(app.taskList, 0, 1, true)
+	app.tasksPane.SetBorder(true).SetTitle(" Tarefas ")
+	app.bindPaneFocus(paneTasks, app.tasksPane.Box)
 	app.bindPaneFocus(paneTasks, app.taskList.Box)
+	app.taskModeLine.SetScrollable(false)
+	app.taskModeLine.SetMouseCapture(func(action tview.MouseAction, event *tcell.EventMouse) (tview.MouseAction, *tcell.EventMouse) {
+		if action == tview.MouseLeftDown {
+			app.selectedPane = paneTasks
+			app.lastTopPane = paneTasks
+			app.enterPane()
+			return tview.MouseConsumed, nil
+		}
+		return action, event
+	})
 	app.categoryList = tview.NewList().ShowSecondaryText(false).SetHighlightFullLine(true).SetWrapAround(true)
 	app.categoryList.SetBorder(true).SetTitle(" Categorias ")
 	app.bindPaneFocus(paneCategories, app.categoryList.Box)
@@ -133,7 +151,7 @@ func (app *App) build() {
 	})
 
 	left := tview.NewFlex().SetDirection(tview.FlexRow).
-		AddItem(app.taskList, 0, 3, true).
+		AddItem(app.tasksPane, 0, 3, true).
 		AddItem(app.categoryList, 0, 2, false)
 	body := tview.NewFlex().
 		AddItem(left, 0, 2, true).
@@ -343,11 +361,17 @@ func (app *App) reload() error {
 }
 
 func (app *App) refreshTaskListTitle() {
-	mode := "Pendentes"
-	if app.showingCompleted {
-		mode = "Concluídos"
+	app.taskModeLine.SetText(taskModeLine(app.showingCompleted))
+}
+
+func taskModeLine(showingCompleted bool) string {
+	pending := "[::b]Pendentes 1[::-]"
+	completed := "[::d]Concluídos 2[::-]"
+	if showingCompleted {
+		pending = "[::d]Pendentes 1[::-]"
+		completed = "[::b]Concluídos 2[::-]"
 	}
-	app.taskList.SetTitle(fmt.Sprintf(" Tarefas · %s ", mode))
+	return " " + pending + "  " + completed + " "
 }
 
 func (app *App) refreshCategoryList() {
