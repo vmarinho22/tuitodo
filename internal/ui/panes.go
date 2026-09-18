@@ -169,7 +169,7 @@ func (app *App) handlePaneKeys(event *tcell.EventKey) *tcell.EventKey {
 		return nil
 	}
 
-	switch event.Rune() {
+	switch shortcutRune(event) {
 	case 'k':
 		app.movePane(tcell.KeyUp)
 		return nil

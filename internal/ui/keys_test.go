@@ -43,3 +43,14 @@ func TestIsEscapeKey(t *testing.T) {
 		})
 	}
 }
+
+func TestShortcutRuneIgnoresCapsLock(t *testing.T) {
+	got := shortcutRune(tcell.NewEventKey(tcell.KeyRune, 'Q', tcell.ModNone))
+	if got != 'q' {
+		t.Fatalf("shortcutRune('Q') = %q, want 'q'", got)
+	}
+	got = shortcutRune(tcell.NewEventKey(tcell.KeyRune, 'a', tcell.ModNone))
+	if got != 'a' {
+		t.Fatalf("shortcutRune('a') = %q, want 'a'", got)
+	}
+}

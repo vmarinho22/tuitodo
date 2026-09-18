@@ -170,7 +170,7 @@ func (app *App) build() {
 
 func bindListVimKeys(list *tview.List) {
 	list.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
-		switch event.Rune() {
+		switch shortcutRune(event) {
 		case 'j':
 			return tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModNone)
 		case 'k':
@@ -200,7 +200,7 @@ func (app *App) handleKeys(event *tcell.EventKey) *tcell.EventKey {
 		return nil
 	}
 
-	switch event.Rune() {
+	switch shortcutRune(event) {
 	case 'q':
 		app.application.Stop()
 		return nil

@@ -213,9 +213,9 @@ func (picker *categoryPicker) InputHandler() func(event *tcell.EventKey, setFocu
 			}
 			return
 		}
-		if event.Rune() == 'j' {
+		if shortcutRune(event) == 'j' {
 			event = tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModNone)
-		} else if event.Rune() == 'k' {
+		} else if shortcutRune(event) == 'k' {
 			event = tcell.NewEventKey(tcell.KeyUp, 0, tcell.ModNone)
 		}
 		if listHandler != nil {
