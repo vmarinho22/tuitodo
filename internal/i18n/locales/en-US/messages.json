@@ -32,7 +32,7 @@
   },
   "help": {
     "title": "Shortcuts",
-    "body": "Arrows choose the pane  Enter enters  Esc back\n[1] To do  [2] Completed\n[a] new task  [c] category  [s] settings\nIn Tasks: [e] edit  [d] delete  [space] complete\nIn Subtasks: [a] add  [e] edit  [d] delete  [space] complete\nIn Completed: pick the day; [space] reopens\n[q] quit"
+    "body": "Navigation\n  Arrows      choose the pane\n  Enter       enter\n  Esc         back\nModes\n  [1]         To do\n  [2]         Completed\nGeneral\n  [a]         new task\n  [c]         category\n  [s]         settings\n  [?]         shortcuts\n  [q]         quit\nTasks and Subtasks\n  [e]         edit\n  [d]         delete\n  [space]     complete\nCompleted\n  [space]     reopen"
   },
   "config": {
     "title": "Settings",

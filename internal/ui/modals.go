@@ -7,6 +7,7 @@ import (
 	"tuitodo/internal/i18n"
 	"tuitodo/internal/store"
 
+	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
 )
 
@@ -19,7 +20,31 @@ func (app *App) openMessageModal(title, message string) {
 }
 
 func (app *App) openHelpModal() {
-	app.openMessageModal(app.t(i18n.KeyHelpTitle), app.t(i18n.KeyHelpBody))
+	form := newStyledForm(app.t(i18n.KeyHelpTitle))
+	body := addStyledHelp(form, app.t(i18n.KeyHelpBody))
+	form.AddButton(app.t(i18n.KeyButtonOK), app.modals.Close)
+	focusFormButtons(form)
+	app.modals.OpenPage(form)
+	form.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+		if isEscapeKey(event) {
+			app.modals.Close()
+			return nil
+		}
+		switch shortcutRune(event) {
+		case 'k':
+			event = tcell.NewEventKey(tcell.KeyUp, 0, tcell.ModNone)
+		case 'j':
+			event = tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModNone)
+		}
+		switch event.Key() {
+		case tcell.KeyUp, tcell.KeyDown, tcell.KeyPgUp, tcell.KeyPgDn:
+			if handler := body.InputHandler(); handler != nil {
+				handler(event, func(tview.Primitive) {})
+				return nil
+			}
+		}
+		return event
+	})
 }
 
 func (app *App) openConfigModal() {

@@ -1,9 +1,11 @@
 package ui
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/gdamore/tcell/v2"
+	"github.com/rivo/tview"
 )
 
 func TestIsEscapeKey(t *testing.T) {
@@ -52,5 +54,30 @@ func TestShortcutRuneIgnoresCapsLock(t *testing.T) {
 	got = shortcutRune(tcell.NewEventKey(tcell.KeyRune, 'a', tcell.ModNone))
 	if got != 'a' {
 		t.Fatalf("shortcutRune('a') = %q, want 'a'", got)
+	}
+}
+
+func TestHelpBodyHeightFitsSmallTerminals(t *testing.T) {
+	if got := helpBodyHeight(1); got != 2 {
+		t.Fatalf("min height = %d, want 2", got)
+	}
+	if got := helpBodyHeight(8); got != 8 {
+		t.Fatalf("short body = %d, want 8", got)
+	}
+	if got := helpBodyHeight(30); got != helpBodyMaxHeight {
+		t.Fatalf("long body = %d, want cap %d", got, helpBodyMaxHeight)
+	}
+}
+
+func TestColorHelpTitlesHighlightsSectionHeaders(t *testing.T) {
+	got := colorHelpTitles("Navegação\n  [a]         nova tarefa\nModos")
+	if !strings.Contains(got, "[yellow::b]") || !strings.Contains(got, "Navegação") {
+		t.Fatalf("title not highlighted: %q", got)
+	}
+	if strings.Contains(got, "[yellow::b]  [") {
+		t.Fatal("shortcut lines should not use the title color")
+	}
+	if !strings.Contains(got, tview.Escape("  [a]         nova tarefa")) {
+		t.Fatalf("shortcut line must be escaped for tview: %q", got)
 	}
 }

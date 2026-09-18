@@ -2,6 +2,7 @@ package i18n
 
 import (
 	"errors"
+	"strings"
 	"testing"
 	"time"
 
@@ -56,6 +57,23 @@ func TestShortcutStringsPutKeysInBrackets(t *testing.T) {
 	pt := NewCatalog(LocalePtBR)
 	if got := pt.T(KeyShortcutsPending); got != " [a] adicionar  [e] editar  [d] apagar  [espaço] concluir" {
 		t.Fatalf("pt pending = %q", got)
+	}
+}
+
+func TestHelpBodyIsGroupedBySection(t *testing.T) {
+	pt := NewCatalog(LocalePtBR)
+	body := pt.T(KeyHelpBody)
+	for _, want := range []string{"Navegação", "Modos", "Geral", "Tarefas", "Concluídos", "[espaço]"} {
+		if !strings.Contains(body, want) {
+			t.Fatalf("help body missing %q:\n%s", want, body)
+		}
+	}
+	if strings.Contains(body, "Setas escolhem o painel  Enter") {
+		t.Fatal("help body still uses the packed one-line layout")
+	}
+	en := NewCatalog(LocaleEnUS)
+	if !strings.Contains(en.T(KeyHelpBody), "Navigation") {
+		t.Fatalf("en help missing Navigation:\n%s", en.T(KeyHelpBody))
 	}
 }
 

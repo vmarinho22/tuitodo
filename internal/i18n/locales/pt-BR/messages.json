@@ -32,7 +32,7 @@
   },
   "help": {
     "title": "Atalhos",
-    "body": "Setas escolhem o painel  Enter entra  Esc volta\n[1] A fazer  [2] Concluídos\n[a] nova tarefa  [c] categoria  [s] config\nEm Tarefas: [e] editar  [d] apagar  [espaço] concluir\nEm Subtarefas: [a] adicionar  [e] editar  [d] apagar  [espaço] concluir\nEm Concluídos: escolha o dia; [espaço] reabre\n[q] sair"
+    "body": "Navegação\n  Setas       escolher o painel\n  Enter       entrar\n  Esc         voltar\nModos\n  [1]         A fazer\n  [2]         Concluídos\nGeral\n  [a]         nova tarefa\n  [c]         categoria\n  [s]         config\n  [?]         atalhos\n  [q]         sair\nTarefas e Subtarefas\n  [e]         editar\n  [d]         apagar\n  [espaço]    concluir\nConcluídos\n  [espaço]    reabrir"
   },
   "config": {
     "title": "Config",

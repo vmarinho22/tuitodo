@@ -71,6 +71,10 @@ func (service *ModalService) OpenPage(content tview.Primitive) {
 	service.openModal(content, newFittedCenter(content))
 }
 
+func (service *ModalService) OpenSized(content tview.Primitive, width, height int) {
+	service.openModal(content, newSizedCenter(content, width, height))
+}
+
 func (service *ModalService) OpenCompact(content tview.Primitive) {
 	service.openModal(content, newCompactCenter(content))
 }

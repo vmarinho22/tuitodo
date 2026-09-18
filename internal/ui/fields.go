@@ -103,10 +103,52 @@ func (field *messageField) InputHandler() func(event *tcell.EventKey, setFocus f
 }
 
 func addStyledMessage(form *tview.Form, message string) {
+	addMessageView(form, message, true)
+}
+
+func addStyledHelp(form *tview.Form, message string) *tview.TextView {
+	view := tview.NewTextView().
+		SetText(colorHelpTitles(message)).
+		SetTextColor(dialogFieldColor).
+		SetDynamicColors(true).
+		SetWrap(true).
+		SetScrollable(true)
+	view.SetBackgroundColor(dialogBackground)
+	height := helpBodyHeight(strings.Count(message, "\n") + 1)
+	form.AddFormItem(&messageField{TextView: view, height: height})
+	return view
+}
+
+const helpBodyMaxHeight = 12
+
+func helpBodyHeight(lineCount int) int {
+	if lineCount < 2 {
+		return 2
+	}
+	if lineCount > helpBodyMaxHeight {
+		return helpBodyMaxHeight
+	}
+	return lineCount
+}
+
+func colorHelpTitles(message string) string {
+	lines := strings.Split(message, "\n")
+	for i, line := range lines {
+		escaped := tview.Escape(line)
+		if line != "" && !strings.HasPrefix(line, " ") {
+			lines[i] = "[yellow::b]" + escaped + "[-:-:-]"
+			continue
+		}
+		lines[i] = escaped
+	}
+	return strings.Join(lines, "\n")
+}
+
+func addMessageView(form *tview.Form, message string, wrap bool) {
 	view := tview.NewTextView().
 		SetText(message).
 		SetTextColor(dialogFieldColor).
-		SetWrap(true)
+		SetWrap(wrap)
 	view.SetBackgroundColor(dialogBackground)
 	height := strings.Count(message, "\n") + 1
 	if height < 2 {
