@@ -1,6 +1,8 @@
-# tuitodo
+# tuitodo - a tui to-do
 
-A local-first terminal todo app. Parent tasks, subtasks, and categories
+![tuitodo](docs/demo.gif)
+
+A simple terminal todo app (Tui). Parent tasks, subtasks, and categories
 live on your machine — nothing is sent to a server, and you keep the data.
 
 Language follows the OS (en-US / pt-BR) and can be changed in the app.
