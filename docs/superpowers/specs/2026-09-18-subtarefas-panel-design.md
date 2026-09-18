@@ -19,20 +19,20 @@ O painel direito é um `Flex` vertical com borda e título `Subtarefas`:
 │ [ ] escrever intro                    │
 │ [x] revisar números                   │
 │                                       │
-│ n nova  e editar  d apagar  espaço concluir │
+│ a adicionar  e editar  d apagar  espaço concluir │
 └───────────────────────────────────────┘
 ```
 
 1. **Cabeçalho** — título da tarefa pai, só leitura. Não recebe foco.
 2. **Lista** — só subtarefas, checkbox `[ ]` / `[x]` como hoje. É o único filho focável do painel.
-3. **Rodapé** — atalhos fixos: `n nova  e editar  d apagar  espaço concluir`. Não recebe foco.
+3. **Rodapé** — atalhos fixos: `a adicionar  e editar  d apagar  espaço concluir`. Não recebe foco.
 
 Título da borda não inclui mais categoria · pai. A categoria continua na lista de Tarefas (texto secundário).
 
 ### Estados vazios
 
 - Nenhum pai selecionado em Tarefas: cabeçalho `Selecione uma tarefa`, lista vazia, rodapé visível.
-- Pai sem subtarefas: cabeçalho com o título do pai, lista vazia, rodapé visível (`n` cria a primeira).
+- Pai sem subtarefas: cabeçalho com o título do pai, lista vazia, rodapé visível (`a` cria a primeira).
 
 ## Navegação
 
@@ -46,14 +46,14 @@ A seção direita continua uma só unidade para as setas. Depois de Enter, o foc
 
 | Tecla | Ação |
 | --- | --- |
-| `n` | Modal Nova subtarefa (título; sem categoria; herda o pai) |
+| `a` | Modal Nova subtarefa (título; sem categoria; herda o pai) |
 | `e` | Modal editar título da sub selecionada |
 | `d` | Confirmar apagar a sub selecionada |
 | espaço | Concluir ou reabrir a sub selecionada |
 
-Reabrir uma sub ainda devolve a família a Pendentes; as outras subs mantêm `completed_at`. Pai já concluído: `n` mostra o erro de reabrir antes de adicionar. Sem item selecionado: `e` / `d` / espaço não fazem nada; `n` ainda cria.
+Reabrir uma sub ainda devolve a família a Pendentes; as outras subs mantêm `completed_at`. Pai já concluído: `a` mostra o erro de reabrir antes de adicionar. Sem item selecionado: `e` / `d` / espaço não fazem nada; `a` ainda cria.
 
-Fora deste painel (incluindo modo “escolher seção”), `n` / `e` / `d` / espaço **não** gerenciam subtarefa.
+Fora deste painel (incluindo modo “escolher seção”), `a` / `e` / `d` / espaço **não** gerenciam subtarefa.
 
 ### Painel Tarefas (depois de Enter)
 
@@ -62,7 +62,7 @@ Fora deste painel (incluindo modo “escolher seção”), `n` / `e` / `d` / esp
 | `e` | Editar título do pai |
 | `d` | Confirmar apagar o pai (e as subs, cascade) |
 | espaço | Concluir ou reabrir o pai (mesmas regras atuais: pai com subs concluído não reabre pelo pai) |
-| `n` | Não cria subtarefa |
+| `a` | Não cria subtarefa (abre nova tarefa pai, atalho global) |
 
 ### Outros
 
@@ -82,7 +82,7 @@ Fora deste painel (incluindo modo “escolher seção”), `n` / `e` / `d` / esp
 - Trocar o `detailList` solto por um container (`subtasksPane`) com cabeçalho, lista e rodapé.
 - `paneDetail` aponta para esse container; o foco interno após Enter é a lista.
 - `refreshDetail` passa a preencher cabeçalho + lista só de subs.
-- `n` / `e` / `d` / espaço em `handleKeys` só disparam se `paneActive` e conforme o `selectedPane`.
+- `a` / `e` / `d` / espaço em `handleKeys` só gerenciam subtarefa se `paneActive` e o painel for Subtarefas; `a` fora desse painel continua criando tarefa pai.
 - Modais de nova sub, editar e apagar reutilizam os cards atuais.
 - Sem mudança em `internal/domain` nem `internal/store`, salvo se algum helper de UI precisar filtrar o pai da lista.
 

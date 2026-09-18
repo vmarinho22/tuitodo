@@ -19,7 +19,7 @@ func (app *App) openMessageModal(title, message string) {
 }
 
 func (app *App) openHelpModal() {
-	app.openMessageModal("Atalhos", "Setas escolhem o painel  Enter entra  Esc volta\n1 Pendentes  2 Concluídos\na nova tarefa  n nova sub  c categoria\ne editar  d apagar  espaço concluir/reabrir\nq sair")
+	app.openMessageModal("Atalhos", "Setas escolhem o painel  Enter entra  Esc volta\n1 Pendentes  2 Concluídos\na nova tarefa  c categoria\nEm Tarefas: e editar  d apagar  espaço concluir\nEm Subtarefas: a adicionar  e editar  d apagar  espaço concluir\nq sair")
 }
 
 func (app *App) openNewCategoryModal() {
@@ -135,27 +135,32 @@ func (app *App) openNewSubtaskModal() {
 }
 
 func (app *App) openEditModal() {
-	focus := app.application.GetFocus()
-	if focus == app.categoryList {
+	switch app.selectedPane {
+	case paneCategories:
 		app.openRenameCategoryModal()
-		return
-	}
-	entry, ok := app.focusedDetailEntry()
-	if !ok {
-		parentTask, found := app.selectedParentTask()
-		if !found {
-			app.modals.ShowError("Nada selecionado para editar.")
+	case paneTasks:
+		parentTask, ok := app.selectedParentTask()
+		if !ok {
 			return
 		}
-		entry = detailEntry{isParent: true, task: parentTask}
+		app.openEditTitleModal(parentTask)
+	case paneDetail:
+		entry, ok := app.focusedDetailEntry()
+		if !ok {
+			return
+		}
+		app.openEditTitleModal(entry.task)
 	}
+}
+
+func (app *App) openEditTitleModal(task domain.Task) {
 	form := tview.NewForm()
 	form.SetBorder(true).SetTitle(" Editar título ")
 	styleForm(form)
-	titleInput := addStyledInputField(form, "Título", entry.task.Title)
+	titleInput := addStyledInputField(form, "Título", task.Title)
 	form.AddButton("Salvar", func() {
 		title := stringsTrim(titleInput.GetText())
-		if err := app.taskRepository.UpdateTaskTitle(entry.task.ID, title); err != nil {
+		if err := app.taskRepository.UpdateTaskTitle(task.ID, title); err != nil {
 			if err == domain.ErrEmptyTitle {
 				app.modals.ShowError("O título não pode ser vazio.")
 				return
@@ -199,9 +204,16 @@ func (app *App) openRenameCategoryModal() {
 }
 
 func (app *App) openDeleteModal() {
-	focus := app.application.GetFocus()
-	if focus == app.categoryList {
+	if app.paneActive && app.selectedPane == paneCategories {
 		app.openDeleteCategoryModal()
+		return
+	}
+	if app.paneActive && app.selectedPane == paneDetail {
+		entry, ok := app.focusedDetailEntry()
+		if !ok {
+			return
+		}
+		app.confirmDeleteTask(entry.task, false)
 		return
 	}
 	parentTask, ok := app.selectedParentTask()
@@ -209,20 +221,17 @@ func (app *App) openDeleteModal() {
 		app.modals.ShowError("Selecione uma tarefa para apagar.")
 		return
 	}
-	entry, hasDetail := app.focusedDetailEntry()
-	target := parentTask
-	label := parentTask.Title
-	if hasDetail && !entry.isParent {
-		target = entry.task
-		label = entry.task.Title
-	}
-	app.openConfirmModal("Apagar", fmt.Sprintf("Apagar \"%s\"?", label), "Apagar", func() {
+	app.confirmDeleteTask(parentTask, true)
+}
+
+func (app *App) confirmDeleteTask(target domain.Task, isParent bool) {
+	app.openConfirmModal("Apagar", fmt.Sprintf("Apagar \"%s\"?", target.Title), "Apagar", func() {
 		if err := app.taskRepository.DeleteTaskByID(target.ID); err != nil {
 			app.modals.Close()
 			app.modals.ShowError(err.Error())
 			return
 		}
-		if target.ID == app.selectedParentID {
+		if isParent && target.ID == app.selectedParentID {
 			app.selectedParentID = 0
 		}
 		app.modals.Close()

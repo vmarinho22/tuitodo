@@ -69,7 +69,7 @@ func (app *App) panePrimitive(id paneID) tview.Primitive {
 	case paneCategories:
 		return app.categoryList
 	case paneDetail:
-		return app.detailList
+		return app.subtasksPane
 	case paneActions:
 		return app.actionsBar
 	default:
@@ -82,7 +82,7 @@ func (app *App) paneBox(id paneID) *tview.Box {
 	case paneCategories:
 		return app.categoryList.Box
 	case paneDetail:
-		return app.detailList.Box
+		return app.subtasksPane.Box
 	case paneActions:
 		return app.actionsBar.Box
 	default:
@@ -128,7 +128,10 @@ func (app *App) selectPane(id paneID) {
 
 func (app *App) enterPane() {
 	app.paneActive = true
-	if app.selectedPane == paneActions {
+	switch app.selectedPane {
+	case paneDetail:
+		app.application.SetFocus(app.detailList)
+	case paneActions:
 		app.highlightAction(actionIDs[0])
 	}
 	app.refreshPaneBorders()

@@ -21,6 +21,8 @@ type App struct {
 	pages              *tview.Pages
 	taskList           *tview.List
 	categoryList       *tview.List
+	subtasksPane       *tview.Flex
+	parentTitle        *tview.TextView
 	detailList         *tview.List
 	actionsBar         *tview.TextView
 	taskRepository     store.TaskRepository
@@ -73,8 +75,17 @@ func (app *App) build() {
 	app.categoryList = tview.NewList().ShowSecondaryText(false).SetHighlightFullLine(true).SetWrapAround(true)
 	app.categoryList.SetBorder(true).SetTitle(" Categorias ")
 	app.bindPaneFocus(paneCategories, app.categoryList.Box)
+	app.parentTitle = tview.NewTextView().SetText("Selecione uma tarefa").SetWrap(true)
+	app.parentTitle.SetTextColor(tview.Styles.SecondaryTextColor)
 	app.detailList = tview.NewList().ShowSecondaryText(false).SetHighlightFullLine(true).SetWrapAround(true)
-	app.detailList.SetBorder(true).SetTitle(" Detalhe ")
+	subtaskShortcuts := tview.NewTextView().SetText(" a adicionar  e editar  d apagar  espaço concluir").SetWrap(false)
+	subtaskShortcuts.SetTextColor(tview.Styles.SecondaryTextColor)
+	app.subtasksPane = tview.NewFlex().SetDirection(tview.FlexRow).
+		AddItem(app.parentTitle, 1, 0, false).
+		AddItem(app.detailList, 0, 1, true).
+		AddItem(subtaskShortcuts, 1, 0, false)
+	app.subtasksPane.SetBorder(true).SetTitle(" Subtarefas ")
+	app.bindPaneFocus(paneDetail, app.subtasksPane.Box)
 	app.bindPaneFocus(paneDetail, app.detailList.Box)
 	app.actionsBar = tview.NewTextView().SetDynamicColors(true).SetRegions(true).SetWrap(false)
 	app.actionsBar.SetBorder(true).SetTitle(" Ações ")
@@ -118,7 +129,7 @@ func (app *App) build() {
 		AddItem(app.categoryList, 0, 2, false)
 	body := tview.NewFlex().
 		AddItem(left, 0, 2, true).
-		AddItem(app.detailList, 0, 3, false)
+		AddItem(app.subtasksPane, 0, 3, false)
 	root := tview.NewFlex().SetDirection(tview.FlexRow).
 		AddItem(body, 0, 1, true).
 		AddItem(app.actionsBar, 3, 0, false)
@@ -165,19 +176,24 @@ func (app *App) handleKeys(event *tcell.EventKey) *tcell.EventKey {
 		app.application.Stop()
 		return nil
 	case 'a':
+		if app.paneActive && app.selectedPane == paneDetail {
+			app.openNewSubtaskModal()
+			return nil
+		}
 		app.openNewParentTaskModal()
 		return nil
 	case 'c':
 		app.openNewCategoryModal()
 		return nil
-	case 'n':
-		app.openNewSubtaskModal()
-		return nil
 	case 'e':
-		app.openEditModal()
+		if app.paneActive {
+			app.openEditModal()
+		}
 		return nil
 	case 'd':
-		app.openDeleteModal()
+		if app.paneActive {
+			app.openDeleteModal()
+		}
 		return nil
 	case '1':
 		app.showingCompleted = false
@@ -191,7 +207,9 @@ func (app *App) handleKeys(event *tcell.EventKey) *tcell.EventKey {
 		app.openHelpModal()
 		return nil
 	case ' ':
-		app.toggleFocusedCompletion()
+		if app.paneActive {
+			app.toggleFocusedCompletion()
+		}
 		return nil
 	}
 	return event
@@ -459,12 +477,10 @@ func (app *App) refreshDetail() {
 	app.detailEntries = nil
 	parentTask, ok := app.selectedParentTask()
 	if !ok {
-		app.detailList.SetTitle(" Detalhe ")
+		app.parentTitle.SetText("Selecione uma tarefa")
 		return
 	}
-	app.detailList.SetTitle(fmt.Sprintf(" %s · %s ", app.categoryName(parentTask.CategoryID), parentTask.Title))
-	app.detailEntries = append(app.detailEntries, detailEntry{isParent: true, task: parentTask})
-	app.detailList.AddItem(checkboxLabel(parentTask), "tarefa pai", 0, nil)
+	app.parentTitle.SetText(parentTask.Title)
 
 	subtasks, err := app.taskRepository.SubtasksByParentID(parentTask.ID)
 	if err != nil {
@@ -498,14 +514,17 @@ func (app *App) toggleFocusedCompletion() {
 	if !ok {
 		return
 	}
-	entry, ok := detailEntry{}, false
-	if app.application.GetFocus() == app.taskList {
+
+	var entry detailEntry
+	switch app.selectedPane {
+	case paneTasks:
 		entry = detailEntry{isParent: true, task: parentTask}
-		ok = true
-	} else {
+	case paneDetail:
 		entry, ok = app.focusedDetailEntry()
-	}
-	if !ok {
+		if !ok {
+			return
+		}
+	default:
 		return
 	}
 
