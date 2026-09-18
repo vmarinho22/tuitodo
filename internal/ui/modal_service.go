@@ -65,24 +65,23 @@ func (service *ModalService) Remember(primitive tview.Primitive) {
 }
 
 func (service *ModalService) OpenPage(content tview.Primitive) {
+	service.openModal(content, newFittedCenter(content))
+}
+
+func (service *ModalService) OpenCompact(content tview.Primitive) {
+	service.openModal(content, newCompactCenter(content))
+}
+
+func (service *ModalService) openModal(content tview.Primitive, overlay *fittedCenter) {
 	service.rememberFocus()
 	service.open = true
 	if form, ok := content.(*tview.Form); ok {
 		form.SetCancelFunc(service.Close)
 		form.SetInputCapture(service.CaptureEscape)
 	}
-	overlay := newFittedCenter(content)
 	overlay.SetInputCapture(service.CaptureEscape)
 	service.pages.AddPage(modalPageName, overlay, true, true)
 	service.application.SetFocus(content)
-}
-
-func (service *ModalService) OpenDialog(modal *tview.Modal) {
-	service.rememberFocus()
-	service.open = true
-	modal.SetInputCapture(service.CaptureEscape)
-	service.pages.AddPage(modalPageName, modal, true, true)
-	service.application.SetFocus(modal)
 }
 
 func (service *ModalService) Close() {
@@ -92,15 +91,28 @@ func (service *ModalService) Close() {
 }
 
 func (service *ModalService) ShowError(message string) {
-	modal := tview.NewModal().
-		SetText(message).
-		AddButtons([]string{"OK"}).
-		SetDoneFunc(func(buttonIndex int, buttonLabel string) {
+	form := newStyledForm("Erro")
+	addStyledMessage(form, message)
+	form.AddButton("OK", service.CloseError)
+	form.SetCancelFunc(service.CloseError)
+	form.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+		if isEscapeKey(event) {
 			service.CloseError()
-		})
-	modal.SetTitle(" Erro ")
-	service.pages.AddPage(errorPageName, modal, true, true)
-	service.application.SetFocus(modal)
+			return nil
+		}
+		return event
+	})
+	focusFormButtons(form)
+	overlay := newCompactCenter(form)
+	overlay.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+		if isEscapeKey(event) {
+			service.CloseError()
+			return nil
+		}
+		return event
+	})
+	service.pages.AddPage(errorPageName, overlay, true, true)
+	service.application.SetFocus(form)
 }
 
 func (service *ModalService) CloseError() {

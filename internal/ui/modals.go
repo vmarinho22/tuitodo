@@ -11,14 +11,11 @@ import (
 )
 
 func (app *App) openMessageModal(title, message string) {
-	modal := tview.NewModal().
-		SetText(message).
-		AddButtons([]string{"OK"}).
-		SetDoneFunc(func(buttonIndex int, buttonLabel string) {
-			app.modals.Close()
-		})
-	modal.SetTitle(" " + title + " ")
-	app.modals.OpenDialog(modal)
+	form := newStyledForm(title)
+	addStyledMessage(form, message)
+	form.AddButton("OK", app.modals.Close)
+	focusFormButtons(form)
+	app.modals.OpenPage(form)
 }
 
 func (app *App) openHelpModal() {
@@ -219,26 +216,20 @@ func (app *App) openDeleteModal() {
 		target = entry.task
 		label = entry.task.Title
 	}
-	modal := tview.NewModal().
-		SetText(fmt.Sprintf("Apagar \"%s\"?", label)).
-		AddButtons([]string{"Apagar", "Cancelar"}).
-		SetDoneFunc(func(buttonIndex int, buttonLabel string) {
-			if buttonLabel == "Apagar" {
-				if err := app.taskRepository.DeleteTaskByID(target.ID); err != nil {
-					app.modals.Close()
-					app.modals.ShowError(err.Error())
-					return
-				}
-				if target.ID == app.selectedParentID {
-					app.selectedParentID = 0
-				}
-			}
+	app.openConfirmModal("Apagar", fmt.Sprintf("Apagar \"%s\"?", label), "Apagar", func() {
+		if err := app.taskRepository.DeleteTaskByID(target.ID); err != nil {
 			app.modals.Close()
-			if err := app.reload(); err != nil {
-				app.modals.ShowError(err.Error())
-			}
-		})
-	app.modals.OpenDialog(modal)
+			app.modals.ShowError(err.Error())
+			return
+		}
+		if target.ID == app.selectedParentID {
+			app.selectedParentID = 0
+		}
+		app.modals.Close()
+		if err := app.reload(); err != nil {
+			app.modals.ShowError(err.Error())
+		}
+	})
 }
 
 func (app *App) openDeleteCategoryModal() {
@@ -248,26 +239,29 @@ func (app *App) openDeleteCategoryModal() {
 		return
 	}
 	category := app.categories[index-1]
-	modal := tview.NewModal().
-		SetText(fmt.Sprintf("Apagar a categoria \"%s\"?", category.Name)).
-		AddButtons([]string{"Apagar", "Cancelar"}).
-		SetDoneFunc(func(buttonIndex int, buttonLabel string) {
-			if buttonLabel == "Apagar" {
-				if err := app.categoryRepository.DeleteCategory(category.ID); err != nil {
-					app.modals.Close()
-					if err == store.ErrCategoryInUse {
-						app.modals.ShowError("Essa categoria ainda tem tarefas.")
-						return
-					}
-					app.modals.ShowError(err.Error())
-					return
-				}
-				app.selectedCategoryID = nil
-			}
+	app.openConfirmModal("Apagar", fmt.Sprintf("Apagar a categoria \"%s\"?", category.Name), "Apagar", func() {
+		if err := app.categoryRepository.DeleteCategory(category.ID); err != nil {
 			app.modals.Close()
-			if err := app.reload(); err != nil {
-				app.modals.ShowError(err.Error())
+			if err == store.ErrCategoryInUse {
+				app.modals.ShowError("Essa categoria ainda tem tarefas.")
+				return
 			}
-		})
-	app.modals.OpenDialog(modal)
+			app.modals.ShowError(err.Error())
+			return
+		}
+		app.selectedCategoryID = nil
+		app.modals.Close()
+		if err := app.reload(); err != nil {
+			app.modals.ShowError(err.Error())
+		}
+	})
+}
+
+func (app *App) openConfirmModal(title, message, confirmLabel string, onConfirm func()) {
+	form := newStyledForm(title)
+	addStyledMessage(form, message)
+	form.AddButton(confirmLabel, onConfirm)
+	form.AddButton("Cancelar", app.modals.Close)
+	focusFormButtons(form)
+	app.modals.OpenCompact(form)
 }

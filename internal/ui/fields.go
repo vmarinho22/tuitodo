@@ -1,6 +1,8 @@
 package ui
 
 import (
+	"strings"
+
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
 )
@@ -51,6 +53,69 @@ func styleForm(form *tview.Form) {
 	form.SetFieldBackgroundColor(tcell.ColorDefault)
 	form.SetFieldTextColor(dialogFieldColor)
 	form.SetLabelColor(dialogLabelColor)
+}
+
+func newStyledForm(title string) *tview.Form {
+	form := tview.NewForm()
+	form.SetBorder(true).SetTitle(" " + strings.TrimSpace(title) + " ")
+	form.SetButtonsAlign(tview.AlignCenter)
+	styleForm(form)
+	return form
+}
+
+type messageField struct {
+	*tview.TextView
+	finished func(key tcell.Key)
+	height   int
+}
+
+func (field *messageField) GetLabel() string { return "" }
+
+func (field *messageField) GetFieldWidth() int { return 0 }
+
+func (field *messageField) GetFieldHeight() int { return field.height }
+
+func (field *messageField) SetFormAttributes(labelWidth int, labelColor, bgColor, fieldTextColor, fieldBgColor tcell.Color) tview.FormItem {
+	field.SetBackgroundColor(dialogBackground)
+	field.SetTextColor(dialogFieldColor)
+	return field
+}
+
+func (field *messageField) SetFinishedFunc(handler func(key tcell.Key)) tview.FormItem {
+	field.finished = handler
+	return field
+}
+
+func (field *messageField) SetDisabled(disabled bool) tview.FormItem {
+	return field
+}
+
+func (field *messageField) InputHandler() func(event *tcell.EventKey, setFocus func(p tview.Primitive)) {
+	return field.WrapInputHandler(func(event *tcell.EventKey, setFocus func(p tview.Primitive)) {
+		switch event.Key() {
+		case tcell.KeyTab, tcell.KeyBacktab, tcell.KeyEnter, tcell.KeyEscape:
+			if field.finished != nil {
+				field.finished(event.Key())
+			}
+		}
+	})
+}
+
+func addStyledMessage(form *tview.Form, message string) {
+	view := tview.NewTextView().
+		SetText(message).
+		SetTextColor(dialogFieldColor).
+		SetWrap(true)
+	view.SetBackgroundColor(dialogBackground)
+	height := strings.Count(message, "\n") + 1
+	if height < 2 {
+		height = 2
+	}
+	form.AddFormItem(&messageField{TextView: view, height: height})
+}
+
+func focusFormButtons(form *tview.Form) {
+	form.SetFocus(form.GetFormItemCount())
 }
 
 func addStyledInputField(form *tview.Form, label, value string) *tview.InputField {
