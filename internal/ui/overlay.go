@@ -7,7 +7,7 @@ import (
 
 const (
 	modalMaxWidth  = 56
-	modalMaxHeight = 16
+	modalMaxHeight = 20
 )
 
 type fittedCenter struct {

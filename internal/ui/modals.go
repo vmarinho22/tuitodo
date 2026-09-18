@@ -73,14 +73,14 @@ func (app *App) openNewParentTaskModal() {
 	form.SetBorder(true).SetTitle(" Nova tarefa ")
 	styleForm(form)
 	titleInput := addStyledInputField(form, "Título", "")
-	categoryDropDown := addStyledDropDown(form, "Categoria", names, selected)
+	categoryPicker := addStyledCategoryPicker(form, "Categoria", names, selected)
 	form.AddButton("Salvar", func() {
 		title := stringsTrim(titleInput.GetText())
 		if err := domain.ValidateTitle(title); err != nil {
 			app.showError("O título não pode ser vazio.")
 			return
 		}
-		categoryIndex, _ := categoryDropDown.GetCurrentOption()
+		categoryIndex := categoryPicker.GetCurrentItem()
 		if categoryIndex < 0 || categoryIndex >= len(app.categories) {
 			app.showError("Escolha uma categoria.")
 			return

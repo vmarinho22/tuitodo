@@ -14,7 +14,8 @@ var (
 
 type stackedField struct {
 	*tview.Flex
-	inner tview.FormItem
+	inner       tview.FormItem
+	innerHeight int
 }
 
 func (field *stackedField) GetLabel() string {
@@ -26,7 +27,7 @@ func (field *stackedField) GetFieldWidth() int {
 }
 
 func (field *stackedField) GetFieldHeight() int {
-	return 4
+	return field.innerHeight + 1
 }
 
 func (field *stackedField) SetFormAttributes(labelWidth int, labelColor, bgColor, fieldTextColor, fieldBgColor tcell.Color) tview.FormItem {
@@ -59,23 +60,86 @@ func addStyledInputField(form *tview.Form, label, value string) *tview.InputFiel
 		SetFieldBackgroundColor(tcell.ColorDefault).
 		SetFieldTextColor(dialogFieldColor)
 	styleInputBox(input.Box)
-	form.AddFormItem(newStackedField(label, input))
+	form.AddFormItem(newStackedField(label, input, 3))
 	return input
 }
 
-func addStyledDropDown(form *tview.Form, label string, options []string, selected int) *tview.DropDown {
-	dropdown := tview.NewDropDown().
-		SetOptions(options, nil).
-		SetCurrentOption(selected).
-		SetFieldBackgroundColor(tcell.ColorDefault).
-		SetFieldTextColor(dialogFieldColor).
-		SetFocusedStyle(tcell.StyleDefault.Foreground(dialogFieldColor).Background(tcell.ColorDefault))
-	styleInputBox(dropdown.Box)
-	form.AddFormItem(newStackedField(label, dropdown))
-	return dropdown
+type categoryPicker struct {
+	*tview.List
+	finished func(key tcell.Key)
 }
 
-func newStackedField(label string, inner tview.FormItem) *stackedField {
+func (picker *categoryPicker) GetLabel() string { return "" }
+
+func (picker *categoryPicker) GetFieldWidth() int { return 0 }
+
+func (picker *categoryPicker) GetFieldHeight() int { return 6 }
+
+func (picker *categoryPicker) SetFormAttributes(labelWidth int, labelColor, bgColor, fieldTextColor, fieldBgColor tcell.Color) tview.FormItem {
+	picker.SetBackgroundColor(dialogBackground)
+	picker.SetMainTextColor(fieldTextColor)
+	picker.SetSelectedTextColor(dialogBackground)
+	picker.SetSelectedBackgroundColor(fieldTextColor)
+	return picker
+}
+
+func (picker *categoryPicker) SetFinishedFunc(handler func(key tcell.Key)) tview.FormItem {
+	picker.finished = handler
+	return picker
+}
+
+func (picker *categoryPicker) SetDisabled(disabled bool) tview.FormItem {
+	return picker
+}
+
+func (picker *categoryPicker) InputHandler() func(event *tcell.EventKey, setFocus func(p tview.Primitive)) {
+	listHandler := picker.List.InputHandler()
+	return func(event *tcell.EventKey, setFocus func(p tview.Primitive)) {
+		switch event.Key() {
+		case tcell.KeyTab, tcell.KeyBacktab, tcell.KeyEscape:
+			if picker.finished != nil {
+				picker.finished(event.Key())
+			}
+			return
+		case tcell.KeyEnter:
+			if picker.finished != nil {
+				picker.finished(tcell.KeyTab)
+			}
+			return
+		}
+		if event.Rune() == 'j' {
+			event = tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModNone)
+		} else if event.Rune() == 'k' {
+			event = tcell.NewEventKey(tcell.KeyUp, 0, tcell.ModNone)
+		}
+		if listHandler != nil {
+			listHandler(event, setFocus)
+		}
+	}
+}
+
+func addStyledCategoryPicker(form *tview.Form, label string, options []string, selected int) *categoryPicker {
+	list := tview.NewList().
+		ShowSecondaryText(false).
+		SetHighlightFullLine(true).
+		SetWrapAround(true).
+		SetSelectedFocusOnly(false)
+	list.SetMainTextColor(dialogFieldColor)
+	list.SetSelectedTextColor(dialogBackground)
+	list.SetSelectedBackgroundColor(dialogFieldColor)
+	styleInputBox(list.Box)
+	for _, option := range options {
+		list.AddItem(option, "", 0, nil)
+	}
+	if selected >= 0 && selected < len(options) {
+		list.SetCurrentItem(selected)
+	}
+	picker := &categoryPicker{List: list}
+	form.AddFormItem(newStackedField(label, picker, 6))
+	return picker
+}
+
+func newStackedField(label string, inner tview.FormItem, innerHeight int) *stackedField {
 	caption := tview.NewTextView().
 		SetText(label).
 		SetTextColor(dialogLabelColor)
@@ -83,10 +147,10 @@ func newStackedField(label string, inner tview.FormItem) *stackedField {
 
 	layout := tview.NewFlex().SetDirection(tview.FlexRow).
 		AddItem(caption, 1, 0, false).
-		AddItem(inner, 3, 0, true)
+		AddItem(inner, innerHeight, 0, true)
 	layout.SetBackgroundColor(dialogBackground)
 
-	return &stackedField{Flex: layout, inner: inner}
+	return &stackedField{Flex: layout, inner: inner, innerHeight: innerHeight}
 }
 
 func styleInputBox(box *tview.Box) {
