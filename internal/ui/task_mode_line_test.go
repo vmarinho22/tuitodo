@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"strings"
 	"testing"
 
 	"tuitodo/internal/i18n"
@@ -25,5 +26,16 @@ func TestTaskModeLine(t *testing.T) {
 	wantCompleted := " [::d]" + todo + "[::-]   [::b]" + completed + "[::-] "
 	if gotCompleted != wantCompleted {
 		t.Fatalf("taskModeLineText() completed = %q, want %q", gotCompleted, wantCompleted)
+	}
+}
+
+func TestActionsBarTextWrapsKeysInBrackets(t *testing.T) {
+	app := &App{catalog: i18n.NewCatalog(i18n.LocaleEnUS)}
+	got := app.actionsBarText()
+	if !strings.Contains(got, tview.Escape("[a]")+" ") {
+		t.Fatalf("actionsBarText() = %q, want [a] before the legend", got)
+	}
+	if !strings.Contains(got, tview.Escape("[?]")+" ") {
+		t.Fatalf("actionsBarText() missing [?]: %q", got)
 	}
 }

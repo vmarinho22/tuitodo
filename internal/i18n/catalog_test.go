@@ -45,6 +45,20 @@ func TestTFormatsArgs(t *testing.T) {
 	}
 }
 
+func TestShortcutStringsPutKeysInBrackets(t *testing.T) {
+	en := NewCatalog(LocaleEnUS)
+	if got := en.T(KeyShortcutsPending); got != " [a] add  [e] edit  [d] delete  [space] complete" {
+		t.Fatalf("en pending = %q", got)
+	}
+	if got := en.T(KeyShortcutsDone); got != " [space] reopen" {
+		t.Fatalf("en done = %q", got)
+	}
+	pt := NewCatalog(LocalePtBR)
+	if got := pt.T(KeyShortcutsPending); got != " [a] adicionar  [e] editar  [d] apagar  [espaço] concluir" {
+		t.Fatalf("pt pending = %q", got)
+	}
+}
+
 func TestErrorKnownSentinels(t *testing.T) {
 	catalog := NewCatalog(LocalePtBR)
 	if got := catalog.Error(domain.ErrEmptyTitle); got != "O título não pode ser vazio." {

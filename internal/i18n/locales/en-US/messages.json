@@ -27,12 +27,12 @@
     "selectDay": "Select a day"
   },
   "shortcuts": {
-    "pending": " a add  e edit  d delete  space complete",
-    "done": " space reopen"
+    "pending": " [a] add  [e] edit  [d] delete  [space] complete",
+    "done": " [space] reopen"
   },
   "help": {
     "title": "Shortcuts",
-    "body": "Arrows choose the pane  Enter enters  Esc back\n1 To do  2 Completed\na new task  c category  s settings\nIn Tasks: e edit  d delete  space complete\nIn Subtasks: a add  e edit  d delete  space complete\nIn Completed: pick the day; space reopens\nq quit"
+    "body": "Arrows choose the pane  Enter enters  Esc back\n[1] To do  [2] Completed\n[a] new task  [c] category  [s] settings\nIn Tasks: [e] edit  [d] delete  [space] complete\nIn Subtasks: [a] add  [e] edit  [d] delete  [space] complete\nIn Completed: pick the day; [space] reopens\n[q] quit"
   },
   "config": {
     "title": "Settings",

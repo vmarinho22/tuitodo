@@ -389,16 +389,30 @@ func (app *App) applyChrome() {
 	app.categoryList.SetTitle(" " + app.t(i18n.KeyCategoriesTitle) + " ")
 	app.subtasksPane.SetTitle(" " + app.t(i18n.KeySubtasksTitle) + " ")
 	app.actionsBar.SetTitle(" " + app.t(i18n.KeyActionsTitle) + " ")
-	app.actionsBar.SetText(fmt.Sprintf(
-		` ["new-task"]a %s[""]   ["new-category"]c %s[""]   ["delete"]d %s[""]   ["config"]s %s[""]   ["help"]? %s[""]   ["quit"]q %s[""]`,
-		app.t(i18n.KeyActionNewTask),
-		app.t(i18n.KeyActionNewCategory),
-		app.t(i18n.KeyActionDelete),
-		app.t(i18n.KeyActionConfig),
-		app.t(i18n.KeyActionHelp),
-		app.t(i18n.KeyActionQuit),
-	))
+	app.actionsBar.SetText(app.actionsBarText())
 	app.taskModeLine.SetText(app.taskModeLineText())
+}
+
+func (app *App) actionsBarText() string {
+	return fmt.Sprintf(
+		` ["new-task"]%s %s[""]   ["new-category"]%s %s[""]   ["delete"]%s %s[""]   ["config"]%s %s[""]   ["help"]%s %s[""]   ["quit"]%s %s[""]`,
+		shortcutKey("a"),
+		app.t(i18n.KeyActionNewTask),
+		shortcutKey("c"),
+		app.t(i18n.KeyActionNewCategory),
+		shortcutKey("d"),
+		app.t(i18n.KeyActionDelete),
+		shortcutKey("s"),
+		app.t(i18n.KeyActionConfig),
+		shortcutKey("?"),
+		app.t(i18n.KeyActionHelp),
+		shortcutKey("q"),
+		app.t(i18n.KeyActionQuit),
+	)
+}
+
+func shortcutKey(key string) string {
+	return tview.Escape("[" + key + "]")
 }
 
 func (app *App) refreshTaskListTitle() {

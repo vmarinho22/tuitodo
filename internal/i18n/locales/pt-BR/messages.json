@@ -27,12 +27,12 @@
     "selectDay": "Selecione um dia"
   },
   "shortcuts": {
-    "pending": " a adicionar  e editar  d apagar  espaço concluir",
-    "done": " espaço reabrir"
+    "pending": " [a] adicionar  [e] editar  [d] apagar  [espaço] concluir",
+    "done": " [espaço] reabrir"
   },
   "help": {
     "title": "Atalhos",
-    "body": "Setas escolhem o painel  Enter entra  Esc volta\n1 A fazer  2 Concluídos\na nova tarefa  c categoria  s config\nEm Tarefas: e editar  d apagar  espaço concluir\nEm Subtarefas: a adicionar  e editar  d apagar  espaço concluir\nEm Concluídos: escolha o dia; espaço reabre\nq sair"
+    "body": "Setas escolhem o painel  Enter entra  Esc volta\n[1] A fazer  [2] Concluídos\n[a] nova tarefa  [c] categoria  [s] config\nEm Tarefas: [e] editar  [d] apagar  [espaço] concluir\nEm Subtarefas: [a] adicionar  [e] editar  [d] apagar  [espaço] concluir\nEm Concluídos: escolha o dia; [espaço] reabre\n[q] sair"
   },
   "config": {
     "title": "Config",

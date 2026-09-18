@@ -44,16 +44,16 @@ Keyboard shortcuts stay the same in every language. Pane titles and labels follo
 
 ## Shortcuts
 
-- `1` — To do
-- `2` — Completed
-- `a` — new task (in Subtasks: new subtask)
-- `c` — new category
-- `s` — Settings
-- `e` — edit
-- `d` — delete
-- `Space` — complete (in Completed: reopen)
-- `?` — shortcuts help
-- `q` — quit
+- `[1]` — To do
+- `[2]` — Completed
+- `[a]` — new task (in Subtasks: new subtask)
+- `[c]` — new category
+- `[s]` — Settings
+- `[e]` — edit
+- `[d]` — delete
+- `[Space]` — complete (in Completed: reopen)
+- `[?]` — shortcuts help
+- `[q]` — quit
 
 ## Completed
 

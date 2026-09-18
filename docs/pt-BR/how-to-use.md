@@ -44,16 +44,16 @@ Os atalhos de teclado não mudam com o idioma. Títulos dos painéis e rótulos 
 
 ## Atalhos
 
-- `1` — A fazer
-- `2` — Concluídos
-- `a` — nova tarefa (em Subtarefas: nova subtarefa)
-- `c` — nova categoria
-- `s` — Config
-- `e` — editar
-- `d` — apagar
-- `Espaço` — concluir (em Concluídos: reabrir)
-- `?` — ajuda de atalhos
-- `q` — sair
+- `[1]` — A fazer
+- `[2]` — Concluídos
+- `[a]` — nova tarefa (em Subtarefas: nova subtarefa)
+- `[c]` — nova categoria
+- `[s]` — Config
+- `[e]` — editar
+- `[d]` — apagar
+- `[Espaço]` — concluir (em Concluídos: reabrir)
+- `[?]` — ajuda de atalhos
+- `[q]` — sair
 
 ## Concluídos
 
