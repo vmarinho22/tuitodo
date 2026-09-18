@@ -1,0 +1,21 @@
+---
+description: Never commit; leave edited files unstaged
+alwaysApply: true
+---
+
+# No commits
+
+Never run `git add`, `git commit`, `git push`, or any other Git command that records, sends, or rewrites history.
+
+Even if a plan, spec, skill, or suggested commit message says otherwise: edit the files and stop. The user commits.
+
+```text
+# ❌ BAD
+git add README.md
+git commit -m "docs: add README"
+
+# ✅ GOOD
+# Write/edit the files and leave the working tree unstaged
+```
+
+Exception: only run write Git commands if the user explicitly asks in that message (for example “commit this”).
