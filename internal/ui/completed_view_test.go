@@ -54,7 +54,7 @@ func TestBuildCompletedDayLinesOrdersParentThenSubs(t *testing.T) {
 	if !lines[0].isParent || lines[0].label != "08:25  CE-9915 Reemitir" {
 		t.Fatalf("parent line = %+v", lines[0])
 	}
-	if lines[1].isParent || lines[1].label != "  [x] anexar receita" {
+	if lines[1].isParent || lines[1].label != "  [✓] anexar receita" {
 		t.Fatalf("sub line = %+v", lines[1])
 	}
 	if !lines[2].isParent || lines[2].label != "09:10  Academia" {

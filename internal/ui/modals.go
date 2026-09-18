@@ -19,7 +19,7 @@ func (app *App) openMessageModal(title, message string) {
 }
 
 func (app *App) openHelpModal() {
-	app.openMessageModal("Atalhos", "Setas escolhem o painel  Enter entra  Esc volta\n1 Pendentes  2 Concluídos\na nova tarefa  c categoria\nEm Tarefas: e editar  d apagar  espaço concluir\nEm Subtarefas: a adicionar  e editar  d apagar  espaço concluir\nEm Concluídos: escolha o dia; espaço reabre\nq sair")
+	app.openMessageModal("Atalhos", "Setas escolhem o painel  Enter entra  Esc volta\n1 A fazer  2 Concluídos\na nova tarefa  c categoria\nEm Tarefas: e editar  d apagar  espaço concluir\nEm Subtarefas: a adicionar  e editar  d apagar  espaço concluir\nEm Concluídos: escolha o dia; espaço reabre\nq sair")
 }
 
 func (app *App) openNewCategoryModal() {

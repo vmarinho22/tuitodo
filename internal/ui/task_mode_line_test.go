@@ -1,17 +1,24 @@
 package ui
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/rivo/tview"
+)
 
 func TestTaskModeLine(t *testing.T) {
-	pending := taskModeLine(false)
-	wantPending := " [::b]Pendentes 1[::-]  [::d]Concluídos 2[::-] "
-	if pending != wantPending {
-		t.Fatalf("taskModeLine(false) = %q, want %q", pending, wantPending)
+	todo := tview.Escape("A fazer [1]")
+	completed := tview.Escape("Concluídos [2]")
+
+	gotPending := taskModeLine(false)
+	wantPending := " [::b]" + todo + "[::-]   [::d]" + completed + "[::-] "
+	if gotPending != wantPending {
+		t.Fatalf("taskModeLine(false) = %q, want %q", gotPending, wantPending)
 	}
 
-	completed := taskModeLine(true)
-	wantCompleted := " [::d]Pendentes 1[::-]  [::b]Concluídos 2[::-] "
-	if completed != wantCompleted {
-		t.Fatalf("taskModeLine(true) = %q, want %q", completed, wantCompleted)
+	gotCompleted := taskModeLine(true)
+	wantCompleted := " [::d]" + todo + "[::-]   [::b]" + completed + "[::-] "
+	if gotCompleted != wantCompleted {
+		t.Fatalf("taskModeLine(true) = %q, want %q", gotCompleted, wantCompleted)
 	}
 }

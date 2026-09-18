@@ -365,13 +365,19 @@ func (app *App) refreshTaskListTitle() {
 }
 
 func taskModeLine(showingCompleted bool) string {
-	pending := "[::b]Pendentes 1[::-]"
-	completed := "[::d]Concluídos 2[::-]"
-	if showingCompleted {
-		pending = "[::d]Pendentes 1[::-]"
-		completed = "[::b]Concluídos 2[::-]"
+	return " " +
+		styleModeLabel("A fazer [1]", !showingCompleted) +
+		"   " +
+		styleModeLabel("Concluídos [2]", showingCompleted) +
+		" "
+}
+
+func styleModeLabel(label string, active bool) string {
+	escaped := tview.Escape(label)
+	if active {
+		return "[::b]" + escaped + "[::-]"
 	}
-	return " " + pending + "  " + completed + " "
+	return "[::d]" + escaped + "[::-]"
 }
 
 func (app *App) refreshCategoryList() {
@@ -646,7 +652,7 @@ func completedSubtaskLabel(task domain.Task) string {
 func checkboxLabel(task domain.Task) string {
 	mark := "[ ]"
 	if task.IsCompleted() {
-		mark = "[x]"
+		mark = "[✓]"
 	}
 	return mark + " " + task.Title
 }
