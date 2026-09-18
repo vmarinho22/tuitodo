@@ -19,7 +19,7 @@ func (app *App) openMessageModal(title, message string) {
 }
 
 func (app *App) openHelpModal() {
-	app.openMessageModal("Atalhos", "Setas escolhem o painel  Enter entra  Esc volta\n1 Pendentes  2 Concluídos\na nova tarefa  c categoria\nEm Tarefas: e editar  d apagar  espaço concluir\nEm Subtarefas: a adicionar  e editar  d apagar  espaço concluir\nq sair")
+	app.openMessageModal("Atalhos", "Setas escolhem o painel  Enter entra  Esc volta\n1 Pendentes  2 Concluídos\na nova tarefa  c categoria\nEm Tarefas: e editar  d apagar  espaço concluir\nEm Subtarefas: a adicionar  e editar  d apagar  espaço concluir\nEm Concluídos: escolha o dia; espaço reabre\nq sair")
 }
 
 func (app *App) openNewCategoryModal() {
@@ -51,6 +51,9 @@ func (app *App) openNewCategoryModal() {
 }
 
 func (app *App) openNewParentTaskModal() {
+	if app.showingCompleted {
+		return
+	}
 	if len(app.categories) == 0 {
 		app.modals.ShowError("Crie uma categoria primeiro (c).")
 		return
@@ -101,6 +104,9 @@ func (app *App) openNewParentTaskModal() {
 }
 
 func (app *App) openNewSubtaskModal() {
+	if app.showingCompleted {
+		return
+	}
 	parentTask, ok := app.selectedParentTask()
 	if !ok {
 		app.modals.ShowError("Selecione uma tarefa pai.")
@@ -135,6 +141,12 @@ func (app *App) openNewSubtaskModal() {
 }
 
 func (app *App) openEditModal() {
+	if app.showingCompleted {
+		if app.selectedPane == paneCategories {
+			app.openRenameCategoryModal()
+		}
+		return
+	}
 	switch app.selectedPane {
 	case paneCategories:
 		app.openRenameCategoryModal()
@@ -204,6 +216,12 @@ func (app *App) openRenameCategoryModal() {
 }
 
 func (app *App) openDeleteModal() {
+	if app.showingCompleted {
+		if app.paneActive && app.selectedPane == paneCategories {
+			app.openDeleteCategoryModal()
+		}
+		return
+	}
 	if app.paneActive && app.selectedPane == paneCategories {
 		app.openDeleteCategoryModal()
 		return

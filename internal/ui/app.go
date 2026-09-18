@@ -14,6 +14,11 @@ import (
 
 const allCategoriesLabel = "Todas"
 
+const (
+	pendingSubtaskShortcuts   = " a adicionar  e editar  d apagar  espaço concluir"
+	completedSubtaskShortcuts = " espaço reabrir"
+)
+
 var actionIDs = []string{"new-task", "new-category", "delete", "help", "quit"}
 
 type App struct {
@@ -23,6 +28,7 @@ type App struct {
 	categoryList       *tview.List
 	subtasksPane       *tview.Flex
 	parentTitle        *tview.TextView
+	subtaskShortcuts   *tview.TextView
 	detailList         *tview.List
 	actionsBar         *tview.TextView
 	taskRepository     store.TaskRepository
@@ -30,6 +36,8 @@ type App struct {
 	showingCompleted   bool
 	selectedCategoryID *int64
 	selectedParentID   int64
+	selectedDay        time.Time
+	completedDays      []domain.CompletedDay
 	taskListEntries    []taskListEntry
 	detailEntries      []detailEntry
 	categories         []domain.Category
@@ -78,12 +86,12 @@ func (app *App) build() {
 	app.parentTitle = tview.NewTextView().SetText("Selecione uma tarefa").SetWrap(true)
 	app.parentTitle.SetTextColor(tview.Styles.SecondaryTextColor)
 	app.detailList = tview.NewList().ShowSecondaryText(false).SetHighlightFullLine(true).SetWrapAround(true)
-	subtaskShortcuts := tview.NewTextView().SetText(" a adicionar  e editar  d apagar  espaço concluir").SetWrap(false)
-	subtaskShortcuts.SetTextColor(tview.Styles.SecondaryTextColor)
+	app.subtaskShortcuts = tview.NewTextView().SetText(pendingSubtaskShortcuts).SetWrap(false)
+	app.subtaskShortcuts.SetTextColor(tview.Styles.SecondaryTextColor)
 	app.subtasksPane = tview.NewFlex().SetDirection(tview.FlexRow).
 		AddItem(app.parentTitle, 1, 0, false).
 		AddItem(app.detailList, 0, 1, true).
-		AddItem(subtaskShortcuts, 1, 0, false)
+		AddItem(app.subtaskShortcuts, 1, 0, false)
 	app.subtasksPane.SetBorder(true).SetTitle(" Subtarefas ")
 	app.bindPaneFocus(paneDetail, app.subtasksPane.Box)
 	app.bindPaneFocus(paneDetail, app.detailList.Box)
@@ -176,6 +184,9 @@ func (app *App) handleKeys(event *tcell.EventKey) *tcell.EventKey {
 		app.application.Stop()
 		return nil
 	case 'a':
+		if app.showingCompleted {
+			return nil
+		}
 		if app.paneActive && app.selectedPane == paneDetail {
 			app.openNewSubtaskModal()
 			return nil
@@ -187,11 +198,17 @@ func (app *App) handleKeys(event *tcell.EventKey) *tcell.EventKey {
 		return nil
 	case 'e':
 		if app.paneActive {
+			if app.showingCompleted && (app.selectedPane == paneDetail || app.selectedPane == paneTasks) {
+				return nil
+			}
 			app.openEditModal()
 		}
 		return nil
 	case 'd':
 		if app.paneActive {
+			if app.showingCompleted && (app.selectedPane == paneDetail || app.selectedPane == paneTasks) {
+				return nil
+			}
 			app.openDeleteModal()
 		}
 		return nil
@@ -208,6 +225,9 @@ func (app *App) handleKeys(event *tcell.EventKey) *tcell.EventKey {
 		return nil
 	case ' ':
 		if app.paneActive {
+			if app.showingCompleted && app.selectedPane == paneTasks {
+				return nil
+			}
 			app.toggleFocusedCompletion()
 		}
 		return nil
@@ -277,6 +297,9 @@ func (app *App) activateHighlightedAction() {
 func (app *App) runAction(actionID string) {
 	switch actionID {
 	case "new-task":
+		if app.showingCompleted {
+			return
+		}
 		app.openNewParentTaskModal()
 	case "new-category":
 		app.openNewCategoryModal()
@@ -356,21 +379,14 @@ func (app *App) refreshCategoryList() {
 func (app *App) refreshTaskList(parentTasks []domain.Task) {
 	app.taskList.Clear()
 	app.taskListEntries = nil
+	app.completedDays = nil
 
+	app.taskList.ShowSecondaryText(!app.showingCompleted)
 	if app.showingCompleted {
-		days := domain.GroupParentTasksByCompletedDay(parentTasks, time.Local)
-		for _, day := range days {
+		app.completedDays = domain.GroupParentTasksByCompletedDay(parentTasks, time.Local)
+		for _, day := range app.completedDays {
 			app.taskListEntries = append(app.taskListEntries, taskListEntry{isDayHeader: true, day: day.Date})
 			app.taskList.AddItem(day.Date.Format("02/01/2006"), "", 0, nil)
-			for _, parentTask := range day.Tasks {
-				app.taskListEntries = append(app.taskListEntries, taskListEntry{parentTask: parentTask})
-				app.taskList.AddItem(
-					fmt.Sprintf("%s  %s", parentTask.CompletedAt.Local().Format("15:04"), parentTask.Title),
-					app.categoryName(parentTask.CategoryID),
-					0,
-					nil,
-				)
-			}
 		}
 	} else {
 		for _, parentTask := range parentTasks {
@@ -381,21 +397,50 @@ func (app *App) refreshTaskList(parentTasks []domain.Task) {
 
 	if len(app.taskListEntries) == 0 {
 		app.selectedParentID = 0
+		if app.showingCompleted {
+			app.selectedDay = time.Time{}
+		}
 		return
 	}
 
-	index := app.indexOfParentTask(app.selectedParentID)
-	if index < 0 {
-		index = 0
-		for i, entry := range app.taskListEntries {
-			if !entry.isDayHeader {
-				index = i
-				break
+	index := -1
+	if app.showingCompleted {
+		index = app.indexOfSelectedDay()
+		if index < 0 {
+			index = 0
+		}
+	} else {
+		index = app.indexOfParentTask(app.selectedParentID)
+		if index < 0 {
+			index = 0
+			for i, entry := range app.taskListEntries {
+				if !entry.isDayHeader {
+					index = i
+					break
+				}
 			}
 		}
 	}
 	app.taskList.SetCurrentItem(index)
 	app.onTaskListChanged(index)
+}
+
+func (app *App) indexOfSelectedDay() int {
+	if app.selectedDay.IsZero() {
+		return -1
+	}
+	for i, entry := range app.taskListEntries {
+		if entry.isDayHeader && sameCalendarDay(entry.day, app.selectedDay) {
+			return i
+		}
+	}
+	return -1
+}
+
+func sameCalendarDay(left, right time.Time) bool {
+	year, month, day := left.Date()
+	otherYear, otherMonth, otherDay := right.Date()
+	return year == otherYear && month == otherMonth && day == otherDay
 }
 
 func (app *App) indexOfParentTask(parentTaskID int64) int {
@@ -452,10 +497,16 @@ func (app *App) onTaskListChanged(index int) {
 	}
 	if index < 0 || index >= len(app.taskListEntries) {
 		app.selectedParentID = 0
+		app.selectedDay = time.Time{}
 		app.refreshDetail()
 		return
 	}
 	entry := app.taskListEntries[index]
+	if app.showingCompleted {
+		app.selectedDay = entry.day
+		app.refreshDetail()
+		return
+	}
 	if entry.isDayHeader {
 		return
 	}
@@ -475,6 +526,11 @@ func (app *App) selectedParentTask() (domain.Task, bool) {
 func (app *App) refreshDetail() {
 	app.detailList.Clear()
 	app.detailEntries = nil
+	if app.showingCompleted {
+		app.refreshCompletedDayDetail()
+		return
+	}
+	app.subtaskShortcuts.SetText(pendingSubtaskShortcuts)
 	parentTask, ok := app.selectedParentTask()
 	if !ok {
 		app.parentTitle.SetText("Selecione uma tarefa")
@@ -491,6 +547,76 @@ func (app *App) refreshDetail() {
 		app.detailEntries = append(app.detailEntries, detailEntry{task: subtask})
 		app.detailList.AddItem(checkboxLabel(subtask), "", 0, nil)
 	}
+}
+
+func (app *App) refreshCompletedDayDetail() {
+	app.subtaskShortcuts.SetText(completedSubtaskShortcuts)
+	day, ok := app.completedDayByDate(app.selectedDay)
+	if !ok {
+		app.parentTitle.SetText("Selecione um dia")
+		return
+	}
+	app.parentTitle.SetText(day.Date.Format("02/01/2006"))
+	subtasksByParent := make(map[int64][]domain.Task, len(day.Tasks))
+	for _, parentTask := range day.Tasks {
+		subtasks, err := app.taskRepository.SubtasksByParentID(parentTask.ID)
+		if err != nil {
+			app.modals.ShowError(err.Error())
+			return
+		}
+		subtasksByParent[parentTask.ID] = subtasks
+	}
+	for _, line := range buildCompletedDayLines(day, subtasksByParent) {
+		app.detailEntries = append(app.detailEntries, detailEntry{isParent: line.isParent, task: line.task})
+		app.detailList.AddItem(line.label, "", 0, nil)
+	}
+}
+
+func (app *App) completedDayByDate(day time.Time) (domain.CompletedDay, bool) {
+	if day.IsZero() {
+		return domain.CompletedDay{}, false
+	}
+	for _, completedDay := range app.completedDays {
+		if sameCalendarDay(completedDay.Date, day) {
+			return completedDay, true
+		}
+	}
+	return domain.CompletedDay{}, false
+}
+
+type completedDayLine struct {
+	isParent bool
+	label    string
+	task     domain.Task
+}
+
+func buildCompletedDayLines(day domain.CompletedDay, subtasksByParent map[int64][]domain.Task) []completedDayLine {
+	lines := make([]completedDayLine, 0)
+	for _, parentTask := range day.Tasks {
+		lines = append(lines, completedDayLine{
+			isParent: true,
+			label:    completedParentLabel(parentTask),
+			task:     parentTask,
+		})
+		for _, subtask := range subtasksByParent[parentTask.ID] {
+			lines = append(lines, completedDayLine{
+				label: completedSubtaskLabel(subtask),
+				task:  subtask,
+			})
+		}
+	}
+	return lines
+}
+
+func completedParentLabel(task domain.Task) string {
+	if task.CompletedAt == nil {
+		return task.Title
+	}
+	return fmt.Sprintf("%s  %s", task.CompletedAt.Local().Format("15:04"), task.Title)
+}
+
+func completedSubtaskLabel(task domain.Task) string {
+	return "  " + checkboxLabel(task)
 }
 
 func checkboxLabel(task domain.Task) string {
@@ -510,6 +636,11 @@ func (app *App) focusedDetailEntry() (detailEntry, bool) {
 }
 
 func (app *App) toggleFocusedCompletion() {
+	if app.showingCompleted {
+		app.reopenFocusedCompletedEntry()
+		return
+	}
+
 	parentTask, ok := app.selectedParentTask()
 	if !ok {
 		return
@@ -558,6 +689,55 @@ func (app *App) toggleFocusedCompletion() {
 		return
 	}
 	app.selectedParentID = parentTask.ID
+	if err := app.reload(); err != nil {
+		app.modals.ShowError(err.Error())
+	}
+}
+
+func (app *App) reopenFocusedCompletedEntry() {
+	if app.selectedPane != paneDetail {
+		return
+	}
+	entry, ok := app.focusedDetailEntry()
+	if !ok {
+		return
+	}
+
+	parentTask := entry.task
+	if !entry.isParent {
+		if entry.task.ParentID == nil {
+			return
+		}
+		var err error
+		parentTask, err = app.taskRepository.ParentTaskByID(*entry.task.ParentID)
+		if err != nil {
+			app.modals.ShowError(err.Error())
+			return
+		}
+	}
+
+	subtasks, err := app.taskRepository.SubtasksByParentID(parentTask.ID)
+	if err != nil {
+		app.modals.ShowError(err.Error())
+		return
+	}
+
+	if entry.isParent {
+		if len(subtasks) > 0 {
+			return
+		}
+		parentTask, err = domain.ReopenParentWithoutSubtasks(parentTask)
+	} else {
+		parentTask, subtasks, err = domain.ReopenSubtask(parentTask, subtasks, entry.task.ID)
+	}
+	if err != nil {
+		app.modals.ShowError(err.Error())
+		return
+	}
+	if err := app.taskRepository.SaveTaskCompletions(parentTask, subtasks); err != nil {
+		app.modals.ShowError(err.Error())
+		return
+	}
 	if err := app.reload(); err != nil {
 		app.modals.ShowError(err.Error())
 	}
