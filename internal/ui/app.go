@@ -83,7 +83,7 @@ func Run(taskRepository store.TaskRepository, categoryRepository store.CategoryR
 
 func (app *App) build() {
 	app.taskModeLine = tview.NewTextView().SetDynamicColors(true).SetWrap(false)
-	app.taskList = tview.NewList().ShowSecondaryText(true).SetHighlightFullLine(true).SetWrapAround(true)
+	app.taskList = tview.NewList().ShowSecondaryText(false).SetHighlightFullLine(true).SetWrapAround(true)
 	app.tasksPane = tview.NewFlex().SetDirection(tview.FlexRow).
 		AddItem(app.taskModeLine, 1, 0, false).
 		AddItem(app.taskList, 0, 1, true)
@@ -452,7 +452,6 @@ func (app *App) refreshTaskList(parentTasks []domain.Task) {
 	app.taskListEntries = nil
 	app.completedDays = nil
 
-	app.taskList.ShowSecondaryText(!app.showingCompleted)
 	if app.showingCompleted {
 		app.completedDays = domain.GroupParentTasksByCompletedDay(parentTasks, time.Local)
 		for _, day := range app.completedDays {
@@ -462,7 +461,7 @@ func (app *App) refreshTaskList(parentTasks []domain.Task) {
 	} else {
 		for _, parentTask := range parentTasks {
 			app.taskListEntries = append(app.taskListEntries, taskListEntry{parentTask: parentTask})
-			app.taskList.AddItem(parentTask.Title, app.categoryName(parentTask.CategoryID), 0, nil)
+			app.taskList.AddItem(parentTask.Title, "", 0, nil)
 		}
 	}
 
@@ -607,7 +606,7 @@ func (app *App) refreshDetail() {
 		app.parentTitle.SetText(app.t(i18n.KeySelectTask))
 		return
 	}
-	app.parentTitle.SetText(parentTask.Title)
+	app.parentTitle.SetText(parentDetailTitle(app.categoryName(parentTask.CategoryID), parentTask.Title))
 
 	subtasks, err := app.taskRepository.SubtasksByParentID(parentTask.ID)
 	if err != nil {
@@ -679,6 +678,13 @@ func buildCompletedDayLines(day domain.CompletedDay, subtasksByParent map[int64]
 	return lines
 }
 
+func parentDetailTitle(categoryName, title string) string {
+	if categoryName == "" {
+		return title
+	}
+	return "[" + categoryName + "] " + title
+}
+
 func completedParentLabel(task domain.Task, formatTime func(time.Time) string) string {
 	if task.CompletedAt == nil {
 		return task.Title
@@ -695,7 +701,7 @@ func checkboxLabel(task domain.Task) string {
 	if task.IsCompleted() {
 		mark = "[✓]"
 	}
-	return mark + " " + task.Title
+	return tview.Escape(mark + " " + task.Title)
 }
 
 func (app *App) focusedDetailEntry() (detailEntry, bool) {

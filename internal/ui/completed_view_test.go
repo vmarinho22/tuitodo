@@ -6,6 +6,8 @@ import (
 
 	"tuitodo/internal/domain"
 	"tuitodo/internal/i18n"
+
+	"github.com/rivo/tview"
 )
 
 func TestSameCalendarDay(t *testing.T) {
@@ -33,6 +35,30 @@ func TestIndexOfSelectedDayRestoresMatchingDate(t *testing.T) {
 
 	if got := app.indexOfSelectedDay(); got != 1 {
 		t.Fatalf("indexOfSelectedDay() = %d, want 1", got)
+	}
+}
+
+func TestParentDetailTitleIncludesCategory(t *testing.T) {
+	got := parentDetailTitle("work", "go to mkt and get some tasks")
+	want := "[work] go to mkt and get some tasks"
+	if got != want {
+		t.Fatalf("parentDetailTitle() = %q, want %q", got, want)
+	}
+}
+
+func TestParentDetailTitleWithoutCategory(t *testing.T) {
+	got := parentDetailTitle("", "go to mkt and get some tasks")
+	want := "go to mkt and get some tasks"
+	if got != want {
+		t.Fatalf("parentDetailTitle() = %q, want %q", got, want)
+	}
+}
+
+func TestCheckboxLabelPendingEscapesTviewStyleTags(t *testing.T) {
+	got := checkboxLabel(domain.Task{Title: "buy milk"})
+	want := tview.Escape("[ ] buy milk")
+	if got != want {
+		t.Fatalf("checkboxLabel() = %q, want %q", got, want)
 	}
 }
 
