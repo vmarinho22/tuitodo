@@ -16,6 +16,8 @@ import (
 
 var ErrCategoryInUse = errors.New("category still has parent tasks")
 
+const SettingLocale = "locale"
+
 const schema = `
 PRAGMA foreign_keys = ON;
 
@@ -37,6 +39,11 @@ CREATE TABLE IF NOT EXISTS tasks (
 CREATE INDEX IF NOT EXISTS tasks_parent_id_idx ON tasks(parent_id);
 CREATE INDEX IF NOT EXISTS tasks_category_id_idx ON tasks(category_id);
 CREATE INDEX IF NOT EXISTS tasks_completed_at_idx ON tasks(completed_at);
+
+CREATE TABLE IF NOT EXISTS settings (
+	key TEXT PRIMARY KEY,
+	value TEXT NOT NULL
+);
 `
 
 type SQLiteStore struct {
@@ -384,4 +391,29 @@ func nullableTime(value *time.Time) any {
 		return nil
 	}
 	return value.Format(time.RFC3339Nano)
+}
+
+func (sqliteStore *SQLiteStore) Setting(key string) (string, error) {
+	var value string
+	err := sqliteStore.db.QueryRow(`SELECT value FROM settings WHERE key = ?`, key).Scan(&value)
+	if err == sql.ErrNoRows {
+		return "", nil
+	}
+	if err != nil {
+		return "", fmt.Errorf("get setting: %w", err)
+	}
+	return value, nil
+}
+
+func (sqliteStore *SQLiteStore) SetSetting(key, value string) error {
+	_, err := sqliteStore.db.Exec(
+		`INSERT INTO settings (key, value) VALUES (?, ?)
+		 ON CONFLICT(key) DO UPDATE SET value = excluded.value`,
+		key,
+		value,
+	)
+	if err != nil {
+		return fmt.Errorf("set setting: %w", err)
+	}
+	return nil
 }

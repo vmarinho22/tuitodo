@@ -135,6 +135,41 @@ func TestDeleteParentTaskDeletesSubtasks(t *testing.T) {
 	}
 }
 
+func TestSettingMissingReturnsEmpty(t *testing.T) {
+	sqliteStore := openTestStore(t)
+	value, err := sqliteStore.Setting(SettingLocale)
+	if err != nil {
+		t.Fatalf("Setting: %v", err)
+	}
+	if value != "" {
+		t.Fatalf("Setting = %q, want empty", value)
+	}
+}
+
+func TestSetAndGetSetting(t *testing.T) {
+	sqliteStore := openTestStore(t)
+	if err := sqliteStore.SetSetting(SettingLocale, "pt-BR"); err != nil {
+		t.Fatalf("SetSetting: %v", err)
+	}
+	value, err := sqliteStore.Setting(SettingLocale)
+	if err != nil {
+		t.Fatalf("Setting: %v", err)
+	}
+	if value != "pt-BR" {
+		t.Fatalf("Setting = %q, want pt-BR", value)
+	}
+	if err := sqliteStore.SetSetting(SettingLocale, "en-US"); err != nil {
+		t.Fatalf("SetSetting overwrite: %v", err)
+	}
+	value, err = sqliteStore.Setting(SettingLocale)
+	if err != nil {
+		t.Fatalf("Setting after overwrite: %v", err)
+	}
+	if value != "en-US" {
+		t.Fatalf("Setting = %q, want en-US", value)
+	}
+}
+
 func TestDeleteCategoryFailsWhenParentTasksExist(t *testing.T) {
 	sqliteStore := openTestStore(t)
 	category, _ := sqliteStore.InsertCategory(domain.Category{Name: "trabalho", CreatedAt: time.Now()})

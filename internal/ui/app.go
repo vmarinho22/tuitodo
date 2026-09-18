@@ -2,24 +2,19 @@ package ui
 
 import (
 	"fmt"
+	"os"
 	"strings"
 	"time"
 
 	"tuitodo/internal/domain"
+	"tuitodo/internal/i18n"
 	"tuitodo/internal/store"
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
 )
 
-const allCategoriesLabel = "Todas"
-
-const (
-	pendingSubtaskShortcuts   = " a adicionar  e editar  d apagar  espaço concluir"
-	completedSubtaskShortcuts = " espaço reabrir"
-)
-
-var actionIDs = []string{"new-task", "new-category", "delete", "help", "quit"}
+var actionIDs = []string{"new-task", "new-category", "delete", "config", "help", "quit"}
 
 type App struct {
 	application        *tview.Application
@@ -35,6 +30,8 @@ type App struct {
 	actionsBar         *tview.TextView
 	taskRepository     store.TaskRepository
 	categoryRepository store.CategoryRepository
+	settingsRepository store.SettingsRepository
+	catalog            *i18n.Catalog
 	showingCompleted   bool
 	selectedCategoryID *int64
 	selectedParentID   int64
@@ -63,11 +60,17 @@ type detailEntry struct {
 	task     domain.Task
 }
 
-func Run(taskRepository store.TaskRepository, categoryRepository store.CategoryRepository) error {
+func Run(taskRepository store.TaskRepository, categoryRepository store.CategoryRepository, settingsRepository store.SettingsRepository) error {
+	saved, err := settingsRepository.Setting(store.SettingLocale)
+	if err != nil {
+		return fmt.Errorf("load locale: %w", err)
+	}
 	app := &App{
 		application:        tview.NewApplication(),
 		taskRepository:     taskRepository,
 		categoryRepository: categoryRepository,
+		settingsRepository: settingsRepository,
+		catalog:            i18n.NewCatalog(i18n.Resolve(saved, os.Getenv("LC_ALL"), os.Getenv("LANG"))),
 	}
 	app.build()
 	if err := app.reload(); err != nil {
@@ -80,12 +83,11 @@ func Run(taskRepository store.TaskRepository, categoryRepository store.CategoryR
 
 func (app *App) build() {
 	app.taskModeLine = tview.NewTextView().SetDynamicColors(true).SetWrap(false)
-	app.taskModeLine.SetText(taskModeLine(false))
 	app.taskList = tview.NewList().ShowSecondaryText(true).SetHighlightFullLine(true).SetWrapAround(true)
 	app.tasksPane = tview.NewFlex().SetDirection(tview.FlexRow).
 		AddItem(app.taskModeLine, 1, 0, false).
 		AddItem(app.taskList, 0, 1, true)
-	app.tasksPane.SetBorder(true).SetTitle(" Tarefas ")
+	app.tasksPane.SetBorder(true)
 	app.bindPaneFocus(paneTasks, app.tasksPane.Box)
 	app.bindPaneFocus(paneTasks, app.taskList.Box)
 	app.taskModeLine.SetScrollable(false)
@@ -99,24 +101,23 @@ func (app *App) build() {
 		return action, event
 	})
 	app.categoryList = tview.NewList().ShowSecondaryText(false).SetHighlightFullLine(true).SetWrapAround(true)
-	app.categoryList.SetBorder(true).SetTitle(" Categorias ")
+	app.categoryList.SetBorder(true)
 	app.bindPaneFocus(paneCategories, app.categoryList.Box)
-	app.parentTitle = tview.NewTextView().SetText("Selecione uma tarefa").SetWrap(true)
+	app.parentTitle = tview.NewTextView().SetWrap(true)
 	app.parentTitle.SetTextColor(tview.Styles.SecondaryTextColor)
 	app.detailList = tview.NewList().ShowSecondaryText(false).SetHighlightFullLine(true).SetWrapAround(true)
-	app.subtaskShortcuts = tview.NewTextView().SetText(pendingSubtaskShortcuts).SetWrap(false)
+	app.subtaskShortcuts = tview.NewTextView().SetWrap(false)
 	app.subtaskShortcuts.SetTextColor(tview.Styles.SecondaryTextColor)
 	app.subtasksPane = tview.NewFlex().SetDirection(tview.FlexRow).
 		AddItem(app.parentTitle, 1, 0, false).
 		AddItem(app.detailList, 0, 1, true).
 		AddItem(app.subtaskShortcuts, 1, 0, false)
-	app.subtasksPane.SetBorder(true).SetTitle(" Subtarefas ")
+	app.subtasksPane.SetBorder(true)
 	app.bindPaneFocus(paneDetail, app.subtasksPane.Box)
 	app.bindPaneFocus(paneDetail, app.detailList.Box)
 	app.actionsBar = tview.NewTextView().SetDynamicColors(true).SetRegions(true).SetWrap(false)
-	app.actionsBar.SetBorder(true).SetTitle(" Ações ")
+	app.actionsBar.SetBorder(true)
 	app.bindPaneFocus(paneActions, app.actionsBar.Box)
-	app.actionsBar.SetText(` ["new-task"]a tarefa[""]   ["new-category"]c categoria[""]   ["delete"]d apagar[""]   ["help"]? atalhos[""]   ["quit"]q sair[""]`)
 	app.actionsBar.SetScrollable(false)
 	app.actionsBar.SetHighlightedFunc(func(added, removed, remaining []string) {
 		if app.actionsNavigating || len(added) == 0 {
@@ -162,6 +163,8 @@ func (app *App) build() {
 
 	app.pages = tview.NewPages().AddPage("main", root, true, true)
 	app.modals = newModalService(app.application, app.pages, app.taskList)
+	app.modals.errorTitle = func() string { return app.t(i18n.KeyErrorTitle) }
+	app.modals.okLabel = func() string { return app.t(i18n.KeyButtonOK) }
 	app.application.SetInputCapture(app.handleKeys)
 }
 
@@ -213,6 +216,9 @@ func (app *App) handleKeys(event *tcell.EventKey) *tcell.EventKey {
 		return nil
 	case 'c':
 		app.openNewCategoryModal()
+		return nil
+	case 's':
+		app.openConfigModal()
 		return nil
 	case 'e':
 		if app.paneActive {
@@ -323,6 +329,8 @@ func (app *App) runAction(actionID string) {
 		app.openNewCategoryModal()
 	case "delete":
 		app.openDeleteModal()
+	case "config":
+		app.openConfigModal()
 	case "help":
 		app.openHelpModal()
 	case "quit":
@@ -331,6 +339,7 @@ func (app *App) runAction(actionID string) {
 }
 
 func (app *App) reload() error {
+	app.applyChrome()
 	categories, err := app.categoryRepository.ListCategories()
 	if err != nil {
 		return fmt.Errorf("list categories: %w", err)
@@ -360,15 +369,47 @@ func (app *App) reload() error {
 	return nil
 }
 
-func (app *App) refreshTaskListTitle() {
-	app.taskModeLine.SetText(taskModeLine(app.showingCompleted))
+func (app *App) t(key string, args ...any) string {
+	if app.catalog == nil {
+		return key
+	}
+	return app.catalog.T(key, args...)
 }
 
-func taskModeLine(showingCompleted bool) string {
+func (app *App) showError(err error) {
+	if app.catalog == nil {
+		app.showError(err)
+		return
+	}
+	app.modals.ShowError(app.catalog.Error(err))
+}
+
+func (app *App) applyChrome() {
+	app.tasksPane.SetTitle(" " + app.t(i18n.KeyTasksTitle) + " ")
+	app.categoryList.SetTitle(" " + app.t(i18n.KeyCategoriesTitle) + " ")
+	app.subtasksPane.SetTitle(" " + app.t(i18n.KeySubtasksTitle) + " ")
+	app.actionsBar.SetTitle(" " + app.t(i18n.KeyActionsTitle) + " ")
+	app.actionsBar.SetText(fmt.Sprintf(
+		` ["new-task"]a %s[""]   ["new-category"]c %s[""]   ["delete"]d %s[""]   ["config"]s %s[""]   ["help"]? %s[""]   ["quit"]q %s[""]`,
+		app.t(i18n.KeyActionNewTask),
+		app.t(i18n.KeyActionNewCategory),
+		app.t(i18n.KeyActionDelete),
+		app.t(i18n.KeyActionConfig),
+		app.t(i18n.KeyActionHelp),
+		app.t(i18n.KeyActionQuit),
+	))
+	app.taskModeLine.SetText(app.taskModeLineText())
+}
+
+func (app *App) refreshTaskListTitle() {
+	app.taskModeLine.SetText(app.taskModeLineText())
+}
+
+func (app *App) taskModeLineText() string {
 	return " " +
-		styleModeLabel("A fazer [1]", !showingCompleted) +
+		styleModeLabel(app.t(i18n.KeyModeTodo), !app.showingCompleted) +
 		"   " +
-		styleModeLabel("Concluídos [2]", showingCompleted) +
+		styleModeLabel(app.t(i18n.KeyModeDone), app.showingCompleted) +
 		" "
 }
 
@@ -381,7 +422,7 @@ func styleModeLabel(label string, active bool) string {
 }
 
 func (app *App) refreshCategoryList() {
-	previousName := allCategoriesLabel
+	previousName := app.t(i18n.KeyCategoriesAll)
 	if current := app.categoryList.GetCurrentItem(); current > 0 && current <= len(app.categories) {
 		previousName = app.categories[current-1].Name
 	} else if app.selectedCategoryID != nil {
@@ -393,7 +434,7 @@ func (app *App) refreshCategoryList() {
 	}
 
 	app.categoryList.Clear()
-	app.categoryList.AddItem(allCategoriesLabel, "", 0, nil)
+	app.categoryList.AddItem(app.t(i18n.KeyCategoriesAll), "", 0, nil)
 	selectedIndex := 0
 	for i, category := range app.categories {
 		app.categoryList.AddItem(category.Name, "", 0, nil)
@@ -416,7 +457,7 @@ func (app *App) refreshTaskList(parentTasks []domain.Task) {
 		app.completedDays = domain.GroupParentTasksByCompletedDay(parentTasks, time.Local)
 		for _, day := range app.completedDays {
 			app.taskListEntries = append(app.taskListEntries, taskListEntry{isDayHeader: true, day: day.Date})
-			app.taskList.AddItem(day.Date.Format("02/01/2006"), "", 0, nil)
+			app.taskList.AddItem(app.catalog.FormatDate(day.Date), "", 0, nil)
 		}
 	} else {
 		for _, parentTask := range parentTasks {
@@ -514,7 +555,7 @@ func (app *App) onCategoryChanged(index int) {
 		parentTasks, err = app.taskRepository.ListPendingParentTasks(app.selectedCategoryID)
 	}
 	if err != nil {
-		app.modals.ShowError(err.Error())
+		app.showError(err)
 		return
 	}
 	app.refreshTaskList(parentTasks)
@@ -560,17 +601,17 @@ func (app *App) refreshDetail() {
 		app.refreshCompletedDayDetail()
 		return
 	}
-	app.subtaskShortcuts.SetText(pendingSubtaskShortcuts)
+	app.subtaskShortcuts.SetText(app.t(i18n.KeyShortcutsPending))
 	parentTask, ok := app.selectedParentTask()
 	if !ok {
-		app.parentTitle.SetText("Selecione uma tarefa")
+		app.parentTitle.SetText(app.t(i18n.KeySelectTask))
 		return
 	}
 	app.parentTitle.SetText(parentTask.Title)
 
 	subtasks, err := app.taskRepository.SubtasksByParentID(parentTask.ID)
 	if err != nil {
-		app.modals.ShowError(err.Error())
+		app.showError(err)
 		return
 	}
 	for _, subtask := range subtasks {
@@ -580,23 +621,23 @@ func (app *App) refreshDetail() {
 }
 
 func (app *App) refreshCompletedDayDetail() {
-	app.subtaskShortcuts.SetText(completedSubtaskShortcuts)
+	app.subtaskShortcuts.SetText(app.t(i18n.KeyShortcutsDone))
 	day, ok := app.completedDayByDate(app.selectedDay)
 	if !ok {
-		app.parentTitle.SetText("Selecione um dia")
+		app.parentTitle.SetText(app.t(i18n.KeySelectDay))
 		return
 	}
-	app.parentTitle.SetText(day.Date.Format("02/01/2006"))
+	app.parentTitle.SetText(app.catalog.FormatDate(day.Date))
 	subtasksByParent := make(map[int64][]domain.Task, len(day.Tasks))
 	for _, parentTask := range day.Tasks {
 		subtasks, err := app.taskRepository.SubtasksByParentID(parentTask.ID)
 		if err != nil {
-			app.modals.ShowError(err.Error())
+			app.showError(err)
 			return
 		}
 		subtasksByParent[parentTask.ID] = subtasks
 	}
-	for _, line := range buildCompletedDayLines(day, subtasksByParent) {
+	for _, line := range buildCompletedDayLines(day, subtasksByParent, app.catalog.FormatTime) {
 		app.detailEntries = append(app.detailEntries, detailEntry{isParent: line.isParent, task: line.task})
 		app.detailList.AddItem(line.label, "", 0, nil)
 	}
@@ -620,12 +661,12 @@ type completedDayLine struct {
 	task     domain.Task
 }
 
-func buildCompletedDayLines(day domain.CompletedDay, subtasksByParent map[int64][]domain.Task) []completedDayLine {
+func buildCompletedDayLines(day domain.CompletedDay, subtasksByParent map[int64][]domain.Task, formatTime func(time.Time) string) []completedDayLine {
 	lines := make([]completedDayLine, 0)
 	for _, parentTask := range day.Tasks {
 		lines = append(lines, completedDayLine{
 			isParent: true,
-			label:    completedParentLabel(parentTask),
+			label:    completedParentLabel(parentTask, formatTime),
 			task:     parentTask,
 		})
 		for _, subtask := range subtasksByParent[parentTask.ID] {
@@ -638,11 +679,11 @@ func buildCompletedDayLines(day domain.CompletedDay, subtasksByParent map[int64]
 	return lines
 }
 
-func completedParentLabel(task domain.Task) string {
+func completedParentLabel(task domain.Task, formatTime func(time.Time) string) string {
 	if task.CompletedAt == nil {
 		return task.Title
 	}
-	return fmt.Sprintf("%s  %s", task.CompletedAt.Local().Format("15:04"), task.Title)
+	return formatTime(task.CompletedAt.Local()) + "  " + task.Title
 }
 
 func completedSubtaskLabel(task domain.Task) string {
@@ -691,7 +732,7 @@ func (app *App) toggleFocusedCompletion() {
 
 	subtasks, err := app.taskRepository.SubtasksByParentID(parentTask.ID)
 	if err != nil {
-		app.modals.ShowError(err.Error())
+		app.showError(err)
 		return
 	}
 	now := time.Now()
@@ -711,16 +752,16 @@ func (app *App) toggleFocusedCompletion() {
 		parentTask, subtasks, err = domain.CompleteSubtask(parentTask, subtasks, entry.task.ID, now)
 	}
 	if err != nil {
-		app.modals.ShowError(err.Error())
+		app.showError(err)
 		return
 	}
 	if err := app.taskRepository.SaveTaskCompletions(parentTask, subtasks); err != nil {
-		app.modals.ShowError(err.Error())
+		app.showError(err)
 		return
 	}
 	app.selectedParentID = parentTask.ID
 	if err := app.reload(); err != nil {
-		app.modals.ShowError(err.Error())
+		app.showError(err)
 	}
 }
 
@@ -741,14 +782,14 @@ func (app *App) reopenFocusedCompletedEntry() {
 		var err error
 		parentTask, err = app.taskRepository.ParentTaskByID(*entry.task.ParentID)
 		if err != nil {
-			app.modals.ShowError(err.Error())
+			app.showError(err)
 			return
 		}
 	}
 
 	subtasks, err := app.taskRepository.SubtasksByParentID(parentTask.ID)
 	if err != nil {
-		app.modals.ShowError(err.Error())
+		app.showError(err)
 		return
 	}
 
@@ -761,15 +802,15 @@ func (app *App) reopenFocusedCompletedEntry() {
 		parentTask, subtasks, err = domain.ReopenSubtask(parentTask, subtasks, entry.task.ID)
 	}
 	if err != nil {
-		app.modals.ShowError(err.Error())
+		app.showError(err)
 		return
 	}
 	if err := app.taskRepository.SaveTaskCompletions(parentTask, subtasks); err != nil {
-		app.modals.ShowError(err.Error())
+		app.showError(err)
 		return
 	}
 	if err := app.reload(); err != nil {
-		app.modals.ShowError(err.Error())
+		app.showError(err)
 	}
 }
 

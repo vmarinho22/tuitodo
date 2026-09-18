@@ -21,7 +21,7 @@ func main() {
 	}
 	defer sqliteStore.Close()
 
-	if err := ui.Run(sqliteStore, sqliteStore); err != nil {
+	if err := ui.Run(sqliteStore, sqliteStore, sqliteStore); err != nil {
 		fmt.Fprintf(os.Stderr, "run ui: %v\n", err)
 		os.Exit(1)
 	}

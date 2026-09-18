@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"tuitodo/internal/domain"
+	"tuitodo/internal/i18n"
 )
 
 func TestSameCalendarDay(t *testing.T) {
@@ -41,12 +42,13 @@ func TestBuildCompletedDayLinesOrdersParentThenSubs(t *testing.T) {
 	parentAlone := domain.Task{ID: 2, Title: "Academia", CompletedAt: ptrTime(time.Date(2026, 9, 18, 9, 10, 0, 0, time.Local))}
 	subtask := domain.Task{ID: 11, ParentID: ptrInt64(1), Title: "anexar receita", CompletedAt: &completedAt}
 
+	formatTime := i18n.NewCatalog(i18n.LocalePtBR).FormatTime
 	lines := buildCompletedDayLines(domain.CompletedDay{
 		Date:  time.Date(2026, 9, 18, 0, 0, 0, 0, time.Local),
 		Tasks: []domain.Task{parentWithSubs, parentAlone},
 	}, map[int64][]domain.Task{
 		1: {subtask},
-	})
+	}, formatTime)
 
 	if len(lines) != 3 {
 		t.Fatalf("len(lines) = %d, want 3", len(lines))

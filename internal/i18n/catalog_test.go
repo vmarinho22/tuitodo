@@ -1,0 +1,86 @@
+package i18n
+
+import (
+	"errors"
+	"testing"
+	"time"
+
+	"tuitodo/internal/domain"
+	"tuitodo/internal/store"
+)
+
+func TestTUsesCurrentLocale(t *testing.T) {
+	catalog := NewCatalog(LocalePtBR)
+	got := catalog.T(KeyTasksTitle)
+	if got != "Tarefas" {
+		t.Fatalf("T(tasks.title) = %q, want Tarefas", got)
+	}
+}
+
+func TestTFallsBackToEnglish(t *testing.T) {
+	catalog := NewCatalog(LocalePtBR)
+	catalog.messages = map[Locale]map[string]string{
+		LocalePtBR: {},
+		LocaleEnUS: catalogs[LocaleEnUS],
+	}
+	got := catalog.T(KeyTasksTitle)
+	if got != "Tasks" {
+		t.Fatalf("fallback = %q, want Tasks", got)
+	}
+}
+
+func TestTMissingKeyReturnsKey(t *testing.T) {
+	catalog := NewCatalog(LocaleEnUS)
+	got := catalog.T("missing.key")
+	if got != "missing.key" {
+		t.Fatalf("T(missing) = %q", got)
+	}
+}
+
+func TestTFormatsArgs(t *testing.T) {
+	catalog := NewCatalog(LocaleEnUS)
+	got := catalog.T(KeyDeleteTaskConfirm, "Gym")
+	if got != `Delete "Gym"?` {
+		t.Fatalf("formatted = %q", got)
+	}
+}
+
+func TestErrorKnownSentinels(t *testing.T) {
+	catalog := NewCatalog(LocalePtBR)
+	if got := catalog.Error(domain.ErrEmptyTitle); got != "O título não pode ser vazio." {
+		t.Fatalf("empty title = %q", got)
+	}
+	if got := catalog.Error(store.ErrCategoryInUse); got != "Essa categoria ainda tem tarefas." {
+		t.Fatalf("category in use = %q", got)
+	}
+	catalog.SetLocale(LocaleEnUS)
+	if got := catalog.Error(domain.ErrEmptyTitle); got != "Title cannot be empty." {
+		t.Fatalf("empty title en = %q", got)
+	}
+}
+
+func TestErrorUnknownUsesGeneric(t *testing.T) {
+	catalog := NewCatalog(LocaleEnUS)
+	got := catalog.Error(errors.New("sqlite boom"))
+	if got != "Something went wrong." {
+		t.Fatalf("unknown = %q", got)
+	}
+}
+
+func TestFormatDateAndTime(t *testing.T) {
+	moment := time.Date(2026, 9, 18, 8, 25, 0, 0, time.Local)
+	en := NewCatalog(LocaleEnUS)
+	if got := en.FormatDate(moment); got != "2026-09-18" {
+		t.Fatalf("en date = %q", got)
+	}
+	if got := en.FormatTime(moment); got != "8:25 AM" {
+		t.Fatalf("en time = %q", got)
+	}
+	pt := NewCatalog(LocalePtBR)
+	if got := pt.FormatDate(moment); got != "18/09/2026" {
+		t.Fatalf("pt date = %q", got)
+	}
+	if got := pt.FormatTime(moment); got != "08:25" {
+		t.Fatalf("pt time = %q", got)
+	}
+}

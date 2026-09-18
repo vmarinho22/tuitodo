@@ -17,6 +17,7 @@ var (
 type stackedField struct {
 	*tview.Flex
 	inner       tview.FormItem
+	caption     *tview.TextView
 	innerHeight int
 }
 
@@ -159,6 +160,13 @@ func addStyledInputField(form *tview.Form, label, value string) *tview.InputFiel
 type categoryPicker struct {
 	*tview.List
 	finished func(key tcell.Key)
+	caption  *tview.TextView
+}
+
+func (picker *categoryPicker) SetCaption(text string) {
+	if picker.caption != nil {
+		picker.caption.SetText(text)
+	}
 }
 
 func (picker *categoryPicker) GetLabel() string { return "" }
@@ -233,7 +241,9 @@ func addStyledCategoryPicker(form *tview.Form, label string, options []string, s
 		list.SetCurrentItem(selected)
 	}
 	picker := &categoryPicker{List: list}
-	form.AddFormItem(newStackedField(label, picker, 6))
+	field := newStackedField(label, picker, 6)
+	picker.caption = field.caption
+	form.AddFormItem(field)
 	return picker
 }
 
@@ -248,7 +258,7 @@ func newStackedField(label string, inner tview.FormItem, innerHeight int) *stack
 		AddItem(inner, innerHeight, 0, true)
 	layout.SetBackgroundColor(dialogBackground)
 
-	return &stackedField{Flex: layout, inner: inner, innerHeight: innerHeight}
+	return &stackedField{Flex: layout, inner: inner, caption: caption, innerHeight: innerHeight}
 }
 
 func styleInputBox(box *tview.Box) {

@@ -1,0 +1,78 @@
+{
+  "tasks": {
+    "title": "Tarefas"
+  },
+  "categories": {
+    "title": "Categorias",
+    "all": "Todas"
+  },
+  "subtasks": {
+    "title": "Subtarefas"
+  },
+  "actions": {
+    "title": "Ações",
+    "newTask": "tarefa",
+    "newCategory": "categoria",
+    "delete": "apagar",
+    "config": "config",
+    "help": "atalhos",
+    "quit": "sair"
+  },
+  "mode": {
+    "todo": "A fazer [1]",
+    "done": "Concluídos [2]"
+  },
+  "empty": {
+    "selectTask": "Selecione uma tarefa",
+    "selectDay": "Selecione um dia"
+  },
+  "shortcuts": {
+    "pending": " a adicionar  e editar  d apagar  espaço concluir",
+    "done": " espaço reabrir"
+  },
+  "help": {
+    "title": "Atalhos",
+    "body": "Setas escolhem o painel  Enter entra  Esc volta\n1 A fazer  2 Concluídos\na nova tarefa  c categoria  s config\nEm Tarefas: e editar  d apagar  espaço concluir\nEm Subtarefas: a adicionar  e editar  d apagar  espaço concluir\nEm Concluídos: escolha o dia; espaço reabre\nq sair"
+  },
+  "config": {
+    "title": "Config",
+    "language": "Idioma"
+  },
+  "button": {
+    "save": "Salvar",
+    "cancel": "Cancelar",
+    "ok": "OK",
+    "delete": "Apagar"
+  },
+  "error": {
+    "title": "Erro",
+    "emptyTitle": "O título não pode ser vazio.",
+    "emptyName": "O nome da categoria não pode ser vazio.",
+    "categoryExists": "Não foi possível criar a categoria. O nome já existe?",
+    "createCategoryFirst": "Crie uma categoria primeiro (c).",
+    "chooseCategory": "Escolha uma categoria.",
+    "selectParent": "Selecione uma tarefa pai.",
+    "reopenBeforeSubtask": "Reabra a tarefa antes de adicionar subtarefas.",
+    "selectCategoryRename": "Selecione uma categoria para renomear.",
+    "renameCategory": "Não foi possível renomear a categoria.",
+    "selectTaskDelete": "Selecione uma tarefa para apagar.",
+    "selectCategoryDelete": "Selecione uma categoria para apagar.",
+    "deleteTask": "Apagar \"%s\"?",
+    "deleteCategory": "Apagar a categoria \"%s\"?",
+    "categoryInUse": "Essa categoria ainda tem tarefas.",
+    "nestedSubtask": "Uma subtarefa não pode ter outra subtarefa como pai.",
+    "notAParent": "Esta não é uma tarefa pai.",
+    "subtaskNotFound": "Subtarefa não encontrada.",
+    "unexpected": "Não foi possível concluir a operação."
+  },
+  "form": {
+    "newCategory": "Nova categoria",
+    "newTask": "Nova tarefa",
+    "newSubtask": "Nova subtarefa",
+    "editTitle": "Editar título",
+    "renameCategory": "Renomear categoria",
+    "name": "Nome",
+    "title": "Título",
+    "category": "Categoria"
+  }
+}

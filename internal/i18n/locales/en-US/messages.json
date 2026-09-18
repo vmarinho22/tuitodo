@@ -1,0 +1,78 @@
+{
+  "tasks": {
+    "title": "Tasks"
+  },
+  "categories": {
+    "title": "Categories",
+    "all": "All"
+  },
+  "subtasks": {
+    "title": "Subtasks"
+  },
+  "actions": {
+    "title": "Actions",
+    "newTask": "task",
+    "newCategory": "category",
+    "delete": "delete",
+    "config": "settings",
+    "help": "shortcuts",
+    "quit": "quit"
+  },
+  "mode": {
+    "todo": "To do [1]",
+    "done": "Completed [2]"
+  },
+  "empty": {
+    "selectTask": "Select a task",
+    "selectDay": "Select a day"
+  },
+  "shortcuts": {
+    "pending": " a add  e edit  d delete  space complete",
+    "done": " space reopen"
+  },
+  "help": {
+    "title": "Shortcuts",
+    "body": "Arrows choose the pane  Enter enters  Esc back\n1 To do  2 Completed\na new task  c category  s settings\nIn Tasks: e edit  d delete  space complete\nIn Subtasks: a add  e edit  d delete  space complete\nIn Completed: pick the day; space reopens\nq quit"
+  },
+  "config": {
+    "title": "Settings",
+    "language": "Language"
+  },
+  "button": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "ok": "OK",
+    "delete": "Delete"
+  },
+  "error": {
+    "title": "Error",
+    "emptyTitle": "Title cannot be empty.",
+    "emptyName": "Category name cannot be empty.",
+    "categoryExists": "Could not create the category. Does the name already exist?",
+    "createCategoryFirst": "Create a category first (c).",
+    "chooseCategory": "Choose a category.",
+    "selectParent": "Select a parent task.",
+    "reopenBeforeSubtask": "Reopen the task before adding subtasks.",
+    "selectCategoryRename": "Select a category to rename.",
+    "renameCategory": "Could not rename the category.",
+    "selectTaskDelete": "Select a task to delete.",
+    "selectCategoryDelete": "Select a category to delete.",
+    "deleteTask": "Delete \"%s\"?",
+    "deleteCategory": "Delete category \"%s\"?",
+    "categoryInUse": "This category still has tasks.",
+    "nestedSubtask": "A subtask cannot have another subtask as parent.",
+    "notAParent": "This is not a parent task.",
+    "subtaskNotFound": "Subtask not found.",
+    "unexpected": "Something went wrong."
+  },
+  "form": {
+    "newCategory": "New category",
+    "newTask": "New task",
+    "newSubtask": "New subtask",
+    "editTitle": "Edit title",
+    "renameCategory": "Rename category",
+    "name": "Name",
+    "title": "Title",
+    "category": "Category"
+  }
+}

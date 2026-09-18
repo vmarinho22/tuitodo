@@ -16,6 +16,9 @@ type ModalService struct {
 	defaultFocus tview.Primitive
 	lastFocused  tview.Primitive
 	open         bool
+	errorTitle   func() string
+	okLabel      func() string
+	onClose      func()
 }
 
 func newModalService(application *tview.Application, pages *tview.Pages, defaultFocus tview.Primitive) *ModalService {
@@ -86,15 +89,28 @@ func (service *ModalService) openModal(content tview.Primitive, overlay *fittedC
 }
 
 func (service *ModalService) Close() {
+	onClose := service.onClose
+	service.onClose = nil
 	service.open = false
 	service.pages.RemovePage(modalPageName)
 	service.restoreFocus()
+	if onClose != nil {
+		onClose()
+	}
 }
 
 func (service *ModalService) ShowError(message string) {
-	form := newStyledForm("Erro")
+	title := "Erro"
+	ok := "OK"
+	if service.errorTitle != nil {
+		title = service.errorTitle()
+	}
+	if service.okLabel != nil {
+		ok = service.okLabel()
+	}
+	form := newStyledForm(title)
 	addStyledMessage(form, message)
-	form.AddButton("OK", service.CloseError)
+	form.AddButton(ok, service.CloseError)
 	form.SetCancelFunc(service.CloseError)
 	form.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 		if isEscapeKey(event) {

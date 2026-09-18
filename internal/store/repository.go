@@ -10,6 +10,11 @@ type CategoryRepository interface {
 	ListCategories() ([]domain.Category, error)
 }
 
+type SettingsRepository interface {
+	Setting(key string) (string, error)
+	SetSetting(key, value string) error
+}
+
 type TaskRepository interface {
 	InsertParentTask(task domain.Task) (domain.Task, error)
 	InsertSubtask(subtask domain.Task, parent domain.Task) (domain.Task, error)
