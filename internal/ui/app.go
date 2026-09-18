@@ -30,8 +30,7 @@ type App struct {
 	detailEntries      []detailEntry
 	categories         []domain.Category
 	reloading          bool
-	modalOpen          bool
-	lastFocused        tview.Primitive
+	modals             *ModalService
 }
 
 type taskListEntry struct {
@@ -108,7 +107,7 @@ func (app *App) build() {
 		AddItem(app.actionsBar, 3, 0, false)
 
 	app.pages = tview.NewPages().AddPage("main", root, true, true)
-	app.lastFocused = app.taskList
+	app.modals = newModalService(app.application, app.pages, app.taskList)
 	app.application.SetInputCapture(app.handleKeys)
 }
 
@@ -124,38 +123,9 @@ func bindListVimKeys(list *tview.List) {
 	})
 }
 
-func (app *App) showError(message string) {
-	modal := tview.NewModal().
-		SetText(message).
-		AddButtons([]string{"OK"}).
-		SetDoneFunc(func(buttonIndex int, buttonLabel string) {
-			app.pages.RemovePage("error")
-			if app.modalOpen {
-				if _, primitive := app.pages.GetFrontPage(); primitive != nil {
-					app.application.SetFocus(primitive)
-				}
-			} else if app.lastFocused != nil {
-				app.application.SetFocus(app.lastFocused)
-			}
-		})
-	modal.SetTitle(" Erro ")
-	app.pages.AddPage("error", modal, true, true)
-	app.application.SetFocus(modal)
-}
-
 func (app *App) handleKeys(event *tcell.EventKey) *tcell.EventKey {
-	if name, _ := app.pages.GetFrontPage(); name == "error" {
-		if event.Key() == tcell.KeyEscape {
-			app.pages.RemovePage("error")
-			return nil
-		}
-		return event
-	}
-	if app.modalOpen {
-		if event.Key() == tcell.KeyEscape {
-			app.closeModal()
-			return nil
-		}
+	event = app.modals.FilterKey(event)
+	if event == nil || app.modals.IsBlocking() {
 		return event
 	}
 
@@ -220,7 +190,7 @@ func (app *App) cycleFocus(backward bool) {
 	} else {
 		index = (index + 1) % len(order)
 	}
-	app.lastFocused = order[index]
+	app.modals.Remember(order[index])
 	app.application.SetFocus(order[index])
 }
 
@@ -374,7 +344,7 @@ func (app *App) onCategoryChanged(index int) {
 		parentTasks, err = app.taskRepository.ListPendingParentTasks(app.selectedCategoryID)
 	}
 	if err != nil {
-		app.showError(err.Error())
+		app.modals.ShowError(err.Error())
 		return
 	}
 	app.refreshTaskList(parentTasks)
@@ -421,7 +391,7 @@ func (app *App) refreshDetail() {
 
 	subtasks, err := app.taskRepository.SubtasksByParentID(parentTask.ID)
 	if err != nil {
-		app.showError(err.Error())
+		app.modals.ShowError(err.Error())
 		return
 	}
 	for _, subtask := range subtasks {
@@ -464,7 +434,7 @@ func (app *App) toggleFocusedCompletion() {
 
 	subtasks, err := app.taskRepository.SubtasksByParentID(parentTask.ID)
 	if err != nil {
-		app.showError(err.Error())
+		app.modals.ShowError(err.Error())
 		return
 	}
 	now := time.Now()
@@ -484,40 +454,17 @@ func (app *App) toggleFocusedCompletion() {
 		parentTask, subtasks, err = domain.CompleteSubtask(parentTask, subtasks, entry.task.ID, now)
 	}
 	if err != nil {
-		app.showError(err.Error())
+		app.modals.ShowError(err.Error())
 		return
 	}
 	if err := app.taskRepository.SaveTaskCompletions(parentTask, subtasks); err != nil {
-		app.showError(err.Error())
+		app.modals.ShowError(err.Error())
 		return
 	}
 	app.selectedParentID = parentTask.ID
 	if err := app.reload(); err != nil {
-		app.showError(err.Error())
+		app.modals.ShowError(err.Error())
 	}
-}
-
-func (app *App) closeModal() {
-	app.modalOpen = false
-	app.pages.RemovePage("modal")
-	focus := app.lastFocused
-	if focus == nil {
-		focus = app.taskList
-	}
-	app.application.SetFocus(focus)
-}
-
-func (app *App) rememberFocus() {
-	if focused := app.application.GetFocus(); focused != nil {
-		app.lastFocused = focused
-	}
-}
-
-func (app *App) openPage(content tview.Primitive) {
-	app.rememberFocus()
-	app.modalOpen = true
-	app.pages.AddPage("modal", newFittedCenter(content), true, true)
-	app.application.SetFocus(content)
 }
 
 func stringsTrim(value string) string {

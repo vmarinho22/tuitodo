@@ -15,13 +15,10 @@ func (app *App) openMessageModal(title, message string) {
 		SetText(message).
 		AddButtons([]string{"OK"}).
 		SetDoneFunc(func(buttonIndex int, buttonLabel string) {
-			app.closeModal()
+			app.modals.Close()
 		})
 	modal.SetTitle(" " + title + " ")
-	app.rememberFocus()
-	app.modalOpen = true
-	app.pages.AddPage("modal", modal, true, true)
-	app.application.SetFocus(modal)
+	app.modals.OpenDialog(modal)
 }
 
 func (app *App) openHelpModal() {
@@ -36,7 +33,7 @@ func (app *App) openNewCategoryModal() {
 	form.AddButton("Salvar", func() {
 		name := stringsTrim(nameInput.GetText())
 		if err := domain.ValidateTitle(name); err != nil {
-			app.showError("O nome da categoria não pode ser vazio.")
+			app.modals.ShowError("O nome da categoria não pode ser vazio.")
 			return
 		}
 		_, err := app.categoryRepository.InsertCategory(domain.Category{
@@ -44,21 +41,21 @@ func (app *App) openNewCategoryModal() {
 			CreatedAt: time.Now(),
 		})
 		if err != nil {
-			app.showError("Não foi possível criar a categoria. O nome já existe?")
+			app.modals.ShowError("Não foi possível criar a categoria. O nome já existe?")
 			return
 		}
-		app.closeModal()
+		app.modals.Close()
 		if err := app.reload(); err != nil {
-			app.showError(err.Error())
+			app.modals.ShowError(err.Error())
 		}
 	})
-	form.AddButton("Cancelar", func() { app.closeModal() })
-	app.openPage(form)
+	form.AddButton("Cancelar", func() { app.modals.Close() })
+	app.modals.OpenPage(form)
 }
 
 func (app *App) openNewParentTaskModal() {
 	if len(app.categories) == 0 {
-		app.showError("Crie uma categoria primeiro (c).")
+		app.modals.ShowError("Crie uma categoria primeiro (c).")
 		return
 	}
 	names := make([]string, 0, len(app.categories))
@@ -77,12 +74,12 @@ func (app *App) openNewParentTaskModal() {
 	form.AddButton("Salvar", func() {
 		title := stringsTrim(titleInput.GetText())
 		if err := domain.ValidateTitle(title); err != nil {
-			app.showError("O título não pode ser vazio.")
+			app.modals.ShowError("O título não pode ser vazio.")
 			return
 		}
 		categoryIndex := categoryPicker.GetCurrentItem()
 		if categoryIndex < 0 || categoryIndex >= len(app.categories) {
-			app.showError("Escolha uma categoria.")
+			app.modals.ShowError("Escolha uma categoria.")
 			return
 		}
 		categoryID := app.categories[categoryIndex].ID
@@ -92,28 +89,28 @@ func (app *App) openNewParentTaskModal() {
 			CreatedAt:  time.Now(),
 		})
 		if err != nil {
-			app.showError(err.Error())
+			app.modals.ShowError(err.Error())
 			return
 		}
 		app.selectedParentID = parentTask.ID
 		app.showingCompleted = false
-		app.closeModal()
+		app.modals.Close()
 		if err := app.reload(); err != nil {
-			app.showError(err.Error())
+			app.modals.ShowError(err.Error())
 		}
 	})
-	form.AddButton("Cancelar", func() { app.closeModal() })
-	app.openPage(form)
+	form.AddButton("Cancelar", func() { app.modals.Close() })
+	app.modals.OpenPage(form)
 }
 
 func (app *App) openNewSubtaskModal() {
 	parentTask, ok := app.selectedParentTask()
 	if !ok {
-		app.showError("Selecione uma tarefa pai.")
+		app.modals.ShowError("Selecione uma tarefa pai.")
 		return
 	}
 	if parentTask.IsCompleted() {
-		app.showError("Reabra a tarefa antes de adicionar subtarefas.")
+		app.modals.ShowError("Reabra a tarefa antes de adicionar subtarefas.")
 		return
 	}
 	form := tview.NewForm()
@@ -125,19 +122,19 @@ func (app *App) openNewSubtaskModal() {
 		subtask := domain.Task{ParentID: &parentTask.ID, Title: title, CreatedAt: time.Now()}
 		if _, err := app.taskRepository.InsertSubtask(subtask, parentTask); err != nil {
 			if err == domain.ErrEmptyTitle {
-				app.showError("O título não pode ser vazio.")
+				app.modals.ShowError("O título não pode ser vazio.")
 				return
 			}
-			app.showError(err.Error())
+			app.modals.ShowError(err.Error())
 			return
 		}
-		app.closeModal()
+		app.modals.Close()
 		if err := app.reload(); err != nil {
-			app.showError(err.Error())
+			app.modals.ShowError(err.Error())
 		}
 	})
-	form.AddButton("Cancelar", func() { app.closeModal() })
-	app.openPage(form)
+	form.AddButton("Cancelar", func() { app.modals.Close() })
+	app.modals.OpenPage(form)
 }
 
 func (app *App) openEditModal() {
@@ -150,7 +147,7 @@ func (app *App) openEditModal() {
 	if !ok {
 		parentTask, found := app.selectedParentTask()
 		if !found {
-			app.showError("Nada selecionado para editar.")
+			app.modals.ShowError("Nada selecionado para editar.")
 			return
 		}
 		entry = detailEntry{isParent: true, task: parentTask}
@@ -163,25 +160,25 @@ func (app *App) openEditModal() {
 		title := stringsTrim(titleInput.GetText())
 		if err := app.taskRepository.UpdateTaskTitle(entry.task.ID, title); err != nil {
 			if err == domain.ErrEmptyTitle {
-				app.showError("O título não pode ser vazio.")
+				app.modals.ShowError("O título não pode ser vazio.")
 				return
 			}
-			app.showError(err.Error())
+			app.modals.ShowError(err.Error())
 			return
 		}
-		app.closeModal()
+		app.modals.Close()
 		if err := app.reload(); err != nil {
-			app.showError(err.Error())
+			app.modals.ShowError(err.Error())
 		}
 	})
-	form.AddButton("Cancelar", func() { app.closeModal() })
-	app.openPage(form)
+	form.AddButton("Cancelar", func() { app.modals.Close() })
+	app.modals.OpenPage(form)
 }
 
 func (app *App) openRenameCategoryModal() {
 	index := app.categoryList.GetCurrentItem()
 	if index <= 0 || index-1 >= len(app.categories) {
-		app.showError("Selecione uma categoria para renomear.")
+		app.modals.ShowError("Selecione uma categoria para renomear.")
 		return
 	}
 	category := app.categories[index-1]
@@ -192,16 +189,16 @@ func (app *App) openRenameCategoryModal() {
 	form.AddButton("Salvar", func() {
 		name := stringsTrim(nameInput.GetText())
 		if err := app.categoryRepository.RenameCategory(category.ID, name); err != nil {
-			app.showError("Não foi possível renomear a categoria.")
+			app.modals.ShowError("Não foi possível renomear a categoria.")
 			return
 		}
-		app.closeModal()
+		app.modals.Close()
 		if err := app.reload(); err != nil {
-			app.showError(err.Error())
+			app.modals.ShowError(err.Error())
 		}
 	})
-	form.AddButton("Cancelar", func() { app.closeModal() })
-	app.openPage(form)
+	form.AddButton("Cancelar", func() { app.modals.Close() })
+	app.modals.OpenPage(form)
 }
 
 func (app *App) openDeleteModal() {
@@ -212,7 +209,7 @@ func (app *App) openDeleteModal() {
 	}
 	parentTask, ok := app.selectedParentTask()
 	if !ok {
-		app.showError("Selecione uma tarefa para apagar.")
+		app.modals.ShowError("Selecione uma tarefa para apagar.")
 		return
 	}
 	entry, hasDetail := app.focusedDetailEntry()
@@ -228,29 +225,26 @@ func (app *App) openDeleteModal() {
 		SetDoneFunc(func(buttonIndex int, buttonLabel string) {
 			if buttonLabel == "Apagar" {
 				if err := app.taskRepository.DeleteTaskByID(target.ID); err != nil {
-					app.closeModal()
-					app.showError(err.Error())
+					app.modals.Close()
+					app.modals.ShowError(err.Error())
 					return
 				}
 				if target.ID == app.selectedParentID {
 					app.selectedParentID = 0
 				}
 			}
-			app.closeModal()
+			app.modals.Close()
 			if err := app.reload(); err != nil {
-				app.showError(err.Error())
+				app.modals.ShowError(err.Error())
 			}
 		})
-	app.rememberFocus()
-	app.modalOpen = true
-	app.pages.AddPage("modal", modal, true, true)
-	app.application.SetFocus(modal)
+	app.modals.OpenDialog(modal)
 }
 
 func (app *App) openDeleteCategoryModal() {
 	index := app.categoryList.GetCurrentItem()
 	if index <= 0 || index-1 >= len(app.categories) {
-		app.showError("Selecione uma categoria para apagar.")
+		app.modals.ShowError("Selecione uma categoria para apagar.")
 		return
 	}
 	category := app.categories[index-1]
@@ -260,23 +254,20 @@ func (app *App) openDeleteCategoryModal() {
 		SetDoneFunc(func(buttonIndex int, buttonLabel string) {
 			if buttonLabel == "Apagar" {
 				if err := app.categoryRepository.DeleteCategory(category.ID); err != nil {
-					app.closeModal()
+					app.modals.Close()
 					if err == store.ErrCategoryInUse {
-						app.showError("Essa categoria ainda tem tarefas.")
+						app.modals.ShowError("Essa categoria ainda tem tarefas.")
 						return
 					}
-					app.showError(err.Error())
+					app.modals.ShowError(err.Error())
 					return
 				}
 				app.selectedCategoryID = nil
 			}
-			app.closeModal()
+			app.modals.Close()
 			if err := app.reload(); err != nil {
-				app.showError(err.Error())
+				app.modals.ShowError(err.Error())
 			}
 		})
-	app.rememberFocus()
-	app.modalOpen = true
-	app.pages.AddPage("modal", modal, true, true)
-	app.application.SetFocus(modal)
+	app.modals.OpenDialog(modal)
 }

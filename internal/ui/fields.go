@@ -95,8 +95,14 @@ func (picker *categoryPicker) SetDisabled(disabled bool) tview.FormItem {
 func (picker *categoryPicker) InputHandler() func(event *tcell.EventKey, setFocus func(p tview.Primitive)) {
 	listHandler := picker.List.InputHandler()
 	return func(event *tcell.EventKey, setFocus func(p tview.Primitive)) {
+		if isEscapeKey(event) {
+			if picker.finished != nil {
+				picker.finished(tcell.KeyEscape)
+			}
+			return
+		}
 		switch event.Key() {
-		case tcell.KeyTab, tcell.KeyBacktab, tcell.KeyEscape:
+		case tcell.KeyTab, tcell.KeyBacktab:
 			if picker.finished != nil {
 				picker.finished(event.Key())
 			}
