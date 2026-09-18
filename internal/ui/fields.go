@@ -118,6 +118,33 @@ func focusFormButtons(form *tview.Form) {
 	form.SetFocus(form.GetFormItemCount())
 }
 
+func bindFormButtonArrows(form *tview.Form, application *tview.Application) {
+	count := form.GetButtonCount()
+	if count == 0 || application == nil {
+		return
+	}
+	itemCount := form.GetFormItemCount()
+	for i := 0; i < count; i++ {
+		index := i
+		button := form.GetButton(index)
+		button.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+			offset := 0
+			switch event.Key() {
+			case tcell.KeyRight, tcell.KeyDown:
+				offset = 1
+			case tcell.KeyLeft, tcell.KeyUp:
+				offset = -1
+			default:
+				return event
+			}
+			next := (index + offset + count) % count
+			form.SetFocus(itemCount + next)
+			application.SetFocus(form.GetButton(next))
+			return nil
+		})
+	}
+}
+
 func addStyledInputField(form *tview.Form, label, value string) *tview.InputField {
 	input := tview.NewInputField().
 		SetText(value).

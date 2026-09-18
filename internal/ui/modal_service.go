@@ -78,6 +78,7 @@ func (service *ModalService) openModal(content tview.Primitive, overlay *fittedC
 	if form, ok := content.(*tview.Form); ok {
 		form.SetCancelFunc(service.Close)
 		form.SetInputCapture(service.CaptureEscape)
+		bindFormButtonArrows(form, service.application)
 	}
 	overlay.SetInputCapture(service.CaptureEscape)
 	service.pages.AddPage(modalPageName, overlay, true, true)
@@ -103,6 +104,7 @@ func (service *ModalService) ShowError(message string) {
 		return event
 	})
 	focusFormButtons(form)
+	bindFormButtonArrows(form, service.application)
 	overlay := newCompactCenter(form)
 	overlay.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 		if isEscapeKey(event) {

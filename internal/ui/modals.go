@@ -19,7 +19,7 @@ func (app *App) openMessageModal(title, message string) {
 }
 
 func (app *App) openHelpModal() {
-	app.openMessageModal("Atalhos", "Tab foca os painéis\n1 Pendentes  2 Concluídos\na nova tarefa  n nova sub  c categoria\ne editar  d apagar  espaço concluir/reabrir\nq sair  Esc fecha modal")
+	app.openMessageModal("Atalhos", "Setas escolhem o painel  Enter entra  Esc volta\n1 Pendentes  2 Concluídos\na nova tarefa  n nova sub  c categoria\ne editar  d apagar  espaço concluir/reabrir\nq sair")
 }
 
 func (app *App) openNewCategoryModal() {

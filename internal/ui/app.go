@@ -14,6 +14,8 @@ import (
 
 const allCategoriesLabel = "Todas"
 
+var actionIDs = []string{"new-task", "new-category", "delete", "help", "quit"}
+
 type App struct {
 	application        *tview.Application
 	pages              *tview.Pages
@@ -31,6 +33,11 @@ type App struct {
 	categories         []domain.Category
 	reloading          bool
 	modals             *ModalService
+	actionsNavigating  bool
+	selectedPane       paneID
+	lastTopPane        paneID
+	paneActive         bool
+	selectingPane      bool
 }
 
 type taskListEntry struct {
@@ -54,35 +61,45 @@ func Run(taskRepository store.TaskRepository, categoryRepository store.CategoryR
 	if err := app.reload(); err != nil {
 		return err
 	}
-	return app.application.EnableMouse(true).SetRoot(app.pages, true).SetFocus(app.taskList).Run()
+	app.application.EnableMouse(true).SetRoot(app.pages, true)
+	app.selectPane(paneTasks)
+	return app.application.Run()
 }
 
 func (app *App) build() {
 	app.taskList = tview.NewList().ShowSecondaryText(true).SetHighlightFullLine(true).SetWrapAround(true)
 	app.taskList.SetBorder(true)
+	app.bindPaneFocus(paneTasks, app.taskList.Box)
 	app.categoryList = tview.NewList().ShowSecondaryText(false).SetHighlightFullLine(true).SetWrapAround(true)
 	app.categoryList.SetBorder(true).SetTitle(" Categorias ")
+	app.bindPaneFocus(paneCategories, app.categoryList.Box)
 	app.detailList = tview.NewList().ShowSecondaryText(false).SetHighlightFullLine(true).SetWrapAround(true)
 	app.detailList.SetBorder(true).SetTitle(" Detalhe ")
+	app.bindPaneFocus(paneDetail, app.detailList.Box)
 	app.actionsBar = tview.NewTextView().SetDynamicColors(true).SetRegions(true).SetWrap(false)
 	app.actionsBar.SetBorder(true).SetTitle(" Ações ")
+	app.bindPaneFocus(paneActions, app.actionsBar.Box)
 	app.actionsBar.SetText(` ["new-task"]a tarefa[""]   ["new-category"]c categoria[""]   ["delete"]d apagar[""]   ["help"]? atalhos[""]   ["quit"]q sair[""]`)
+	app.actionsBar.SetScrollable(false)
 	app.actionsBar.SetHighlightedFunc(func(added, removed, remaining []string) {
-		if len(added) == 0 {
+		if app.actionsNavigating || len(added) == 0 {
 			return
 		}
-		switch added[0] {
-		case "new-task":
-			app.openNewParentTaskModal()
-		case "new-category":
-			app.openNewCategoryModal()
-		case "delete":
-			app.openDeleteModal()
-		case "help":
-			app.openHelpModal()
-		case "quit":
-			app.application.Stop()
+		app.runAction(added[0])
+	})
+	app.actionsBar.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+		switch event.Key() {
+		case tcell.KeyLeft, tcell.KeyUp:
+			app.cycleAction(-1)
+			return nil
+		case tcell.KeyRight, tcell.KeyDown:
+			app.cycleAction(1)
+			return nil
+		case tcell.KeyEnter:
+			app.activateHighlightedAction()
+			return nil
 		}
+		return event
 	})
 
 	bindListVimKeys(app.taskList)
@@ -127,6 +144,11 @@ func (app *App) handleKeys(event *tcell.EventKey) *tcell.EventKey {
 	event = app.modals.FilterKey(event)
 	if event == nil || app.modals.IsBlocking() {
 		return event
+	}
+
+	event = app.handlePaneKeys(event)
+	if event == nil {
+		return nil
 	}
 
 	if event.Key() == tcell.KeyTab {
@@ -176,11 +198,10 @@ func (app *App) handleKeys(event *tcell.EventKey) *tcell.EventKey {
 }
 
 func (app *App) cycleFocus(backward bool) {
-	order := []tview.Primitive{app.taskList, app.categoryList, app.detailList, app.actionsBar}
-	current := app.application.GetFocus()
+	order := []paneID{paneTasks, paneCategories, paneDetail, paneActions}
 	index := 0
-	for i, primitive := range order {
-		if primitive == current {
+	for i, id := range order {
+		if id == app.selectedPane {
 			index = i
 			break
 		}
@@ -190,8 +211,64 @@ func (app *App) cycleFocus(backward bool) {
 	} else {
 		index = (index + 1) % len(order)
 	}
-	app.modals.Remember(order[index])
-	app.application.SetFocus(order[index])
+	app.paneActive = false
+	app.selectPane(order[index])
+}
+
+func (app *App) highlightAction(actionID string) {
+	app.actionsNavigating = true
+	if actionID == "" {
+		app.actionsBar.Highlight()
+	} else {
+		app.actionsBar.Highlight(actionID)
+	}
+	app.actionsNavigating = false
+}
+
+func (app *App) cycleAction(offset int) {
+	current := ""
+	if highlights := app.actionsBar.GetHighlights(); len(highlights) > 0 {
+		current = highlights[0]
+	}
+	index := 0
+	found := false
+	for i, actionID := range actionIDs {
+		if actionID == current {
+			index = i
+			found = true
+			break
+		}
+	}
+	if found {
+		index = (index + offset + len(actionIDs)) % len(actionIDs)
+	} else if offset < 0 {
+		index = len(actionIDs) - 1
+	}
+	app.highlightAction(actionIDs[index])
+}
+
+func (app *App) activateHighlightedAction() {
+	highlights := app.actionsBar.GetHighlights()
+	if len(highlights) == 0 {
+		app.highlightAction(actionIDs[0])
+		return
+	}
+	app.runAction(highlights[0])
+}
+
+func (app *App) runAction(actionID string) {
+	switch actionID {
+	case "new-task":
+		app.openNewParentTaskModal()
+	case "new-category":
+		app.openNewCategoryModal()
+	case "delete":
+		app.openDeleteModal()
+	case "help":
+		app.openHelpModal()
+	case "quit":
+		app.application.Stop()
+	}
 }
 
 func (app *App) reload() error {
