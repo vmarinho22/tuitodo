@@ -1,2 +1,3 @@
 /tuitodo
 *.db
+/dist/

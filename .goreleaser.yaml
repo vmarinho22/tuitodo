@@ -1,0 +1,41 @@
+version: 2
+
+project_name: tuitodo
+
+builds:
+  - id: tuitodo
+    main: ./cmd/tuitodo
+    binary: tuitodo
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+    ldflags:
+      - -s -w
+
+nfpms:
+  - package_name: tuitodo
+    file_name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    formats:
+      - deb
+    bindir: /usr/bin
+    section: utils
+    description: Local-first terminal todo app
+    homepage: https://github.com/vmarinho22/tuitodo
+    maintainer: vmarinho22
+
+homebrew_casks:
+  - name: tuitodo
+    directory: Casks
+    homepage: https://github.com/vmarinho22/tuitodo
+    description: Local-first terminal todo app
+    binaries:
+      - tuitodo
+    repository:
+      owner: vmarinho22
+      name: tuitodo
+      token: "{{ .Env.GITHUB_TOKEN }}"

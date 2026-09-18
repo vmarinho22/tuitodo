@@ -2,7 +2,22 @@
 
 **Idioma:** [English](../en-US/how-to-use.md) · Portuguese (Brazil)
 
-## Executar
+## Instalar
+
+macOS (Homebrew):
+
+```bash
+brew tap vmarinho22/tuitodo https://github.com/vmarinho22/tuitodo
+brew install --cask tuitodo
+```
+
+Ubuntu (`.deb` da GitHub Release):
+
+```bash
+sudo apt install ./tuitodo_<version>_linux_amd64.deb
+```
+
+## Executar a partir do código
 
 Requer Go 1.25 ou mais recente.
 
