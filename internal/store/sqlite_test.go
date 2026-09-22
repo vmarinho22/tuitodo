@@ -118,6 +118,46 @@ func TestSaveTaskCompletionsAndListCompleted(t *testing.T) {
 	}
 }
 
+func TestListCompletedParentTasksIncludesPendingParentWithCompletedSub(t *testing.T) {
+	sqliteStore := openTestStore(t)
+	now := time.Date(2026, 9, 18, 10, 0, 0, 0, time.Local)
+	category, _ := sqliteStore.InsertCategory(domain.Category{Name: "trabalho", CreatedAt: now})
+	parent, _ := sqliteStore.InsertParentTask(domain.Task{CategoryID: &category.ID, Title: "pai", CreatedAt: now})
+	idle, _ := sqliteStore.InsertParentTask(domain.Task{CategoryID: &category.ID, Title: "sem atividade", CreatedAt: now})
+	subDone, _ := sqliteStore.InsertSubtask(domain.Task{ParentID: &parent.ID, Title: "feita", CreatedAt: now}, parent)
+	subPending, _ := sqliteStore.InsertSubtask(domain.Task{ParentID: &parent.ID, Title: "pendente", CreatedAt: now}, parent)
+	updatedParent, completedSubs, err := domain.CompleteSubtask(parent, []domain.Task{subDone, subPending}, subDone.ID, now)
+	if err != nil {
+		t.Fatalf("CompleteSubtask: %v", err)
+	}
+	if updatedParent.IsCompleted() {
+		t.Fatal("parent should stay pending while a sub is open")
+	}
+	if err := sqliteStore.SaveTaskCompletions(updatedParent, completedSubs); err != nil {
+		t.Fatalf("SaveTaskCompletions: %v", err)
+	}
+
+	completed, err := sqliteStore.ListCompletedParentTasks(nil)
+	if err != nil {
+		t.Fatalf("ListCompletedParentTasks: %v", err)
+	}
+	if len(completed) != 1 || completed[0].ID != parent.ID || completed[0].CompletedAt != nil {
+		t.Fatalf("completed = %+v", completed)
+	}
+
+	pending, err := sqliteStore.ListPendingParentTasks(nil)
+	if err != nil {
+		t.Fatalf("ListPendingParentTasks: %v", err)
+	}
+	ids := map[int64]bool{}
+	for _, task := range pending {
+		ids[task.ID] = true
+	}
+	if !ids[parent.ID] || !ids[idle.ID] {
+		t.Fatalf("pending = %+v", pending)
+	}
+}
+
 func TestDeleteParentTaskDeletesSubtasks(t *testing.T) {
 	sqliteStore := openTestStore(t)
 	category, _ := sqliteStore.InsertCategory(domain.Category{Name: "trabalho", CreatedAt: time.Now()})

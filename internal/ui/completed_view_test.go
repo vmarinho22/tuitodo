@@ -64,16 +64,18 @@ func TestCheckboxLabelPendingEscapesTviewStyleTags(t *testing.T) {
 
 func TestBuildCompletedDayLinesOrdersParentThenSubs(t *testing.T) {
 	completedAt := time.Date(2026, 9, 18, 8, 25, 0, 0, time.Local)
+	day := time.Date(2026, 9, 18, 0, 0, 0, 0, time.Local)
 	parentWithSubs := domain.Task{ID: 1, Title: "CE-9915 Reemitir", CompletedAt: &completedAt}
 	parentAlone := domain.Task{ID: 2, Title: "Academia", CompletedAt: ptrTime(time.Date(2026, 9, 18, 9, 10, 0, 0, time.Local))}
 	subtask := domain.Task{ID: 11, ParentID: ptrInt64(1), Title: "anexar receita", CompletedAt: &completedAt}
 
 	formatTime := i18n.NewCatalog(i18n.LocalePtBR).FormatTime
 	lines := buildCompletedDayLines(domain.CompletedDay{
-		Date:  time.Date(2026, 9, 18, 0, 0, 0, 0, time.Local),
-		Tasks: []domain.Task{parentWithSubs, parentAlone},
-	}, map[int64][]domain.Task{
-		1: {subtask},
+		Date: day,
+		Entries: []domain.CompletedDayEntry{
+			{Parent: parentWithSubs, Subtasks: []domain.Task{subtask}},
+			{Parent: parentAlone},
+		},
 	}, formatTime)
 
 	if len(lines) != 3 {
@@ -87,6 +89,20 @@ func TestBuildCompletedDayLinesOrdersParentThenSubs(t *testing.T) {
 	}
 	if !lines[2].isParent || lines[2].label != "09:10  Academia" {
 		t.Fatalf("parent without subs = %+v", lines[2])
+	}
+}
+
+func TestCompletedParentLabelOmitsTimeWhenParentPendingOnDay(t *testing.T) {
+	day := time.Date(2026, 9, 18, 0, 0, 0, 0, time.Local)
+	formatTime := i18n.NewCatalog(i18n.LocalePtBR).FormatTime
+	pending := domain.Task{ID: 1, Title: "pai"}
+	if got := completedParentLabel(day, pending, formatTime); got != "pai" {
+		t.Fatalf("pending parent = %q", got)
+	}
+	otherDay := time.Date(2026, 9, 17, 8, 0, 0, 0, time.Local)
+	completedOtherDay := domain.Task{ID: 2, Title: "pai", CompletedAt: &otherDay}
+	if got := completedParentLabel(day, completedOtherDay, formatTime); got != "pai" {
+		t.Fatalf("other-day parent = %q", got)
 	}
 }
 

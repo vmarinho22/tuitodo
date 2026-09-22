@@ -152,25 +152,73 @@ func TestValidateTitleRejectsEmpty(t *testing.T) {
 	}
 }
 
-func TestGroupParentTasksByCompletedDay(t *testing.T) {
+func TestGroupCompletedActivityByDayPendingParentWithSub(t *testing.T) {
 	loc := time.Local
-	morning := time.Date(2026, 9, 17, 9, 10, 0, 0, loc)
-	afternoon := time.Date(2026, 9, 17, 14, 32, 0, 0, loc)
-	yesterday := time.Date(2026, 9, 16, 18, 0, 0, 0, loc)
+	dayA := time.Date(2026, 9, 18, 10, 0, 0, 0, loc)
+	parent := Task{ID: 1, Title: "pai"}
+	sub := Task{ID: 11, ParentID: ptrInt64(1), Title: "sub A", CompletedAt: &dayA}
 
-	days := GroupParentTasksByCompletedDay([]Task{
-		{ID: 1, Title: "tarde", CompletedAt: &afternoon},
-		{ID: 2, Title: "manhã", CompletedAt: &morning},
-		{ID: 3, Title: "ontem", CompletedAt: &yesterday},
-	}, loc)
+	days := GroupCompletedActivityByDay([]Task{parent}, map[int64][]Task{1: {sub}}, loc)
+	if len(days) != 1 {
+		t.Fatalf("days = %d, want 1", len(days))
+	}
+	if len(days[0].Entries) != 1 || days[0].Entries[0].Parent.ID != 1 {
+		t.Fatalf("entries = %+v", days[0].Entries)
+	}
+	if len(days[0].Entries[0].Subtasks) != 1 || days[0].Entries[0].Subtasks[0].ID != 11 {
+		t.Fatalf("subs = %+v", days[0].Entries[0].Subtasks)
+	}
+}
 
+func TestGroupCompletedActivityByDaySplitsSubsAcrossDays(t *testing.T) {
+	loc := time.Local
+	dayA := time.Date(2026, 9, 18, 10, 0, 0, 0, loc)
+	dayB := time.Date(2026, 9, 19, 11, 0, 0, 0, loc)
+	parent := Task{ID: 1, Title: "pai"}
+	subA := Task{ID: 11, ParentID: ptrInt64(1), Title: "a", CompletedAt: &dayA}
+	subB := Task{ID: 12, ParentID: ptrInt64(1), Title: "b", CompletedAt: &dayB}
+
+	days := GroupCompletedActivityByDay([]Task{parent}, map[int64][]Task{1: {subA, subB}}, loc)
 	if len(days) != 2 {
-		t.Fatalf("got %d days, want 2", len(days))
+		t.Fatalf("days = %d, want 2", len(days))
 	}
-	if days[0].Tasks[0].Title != "tarde" || days[0].Tasks[1].Title != "manhã" {
-		t.Fatalf("17/09 order = %v, %v", days[0].Tasks[0].Title, days[0].Tasks[1].Title)
+	if !sameDay(days[0].Date, dayB) || days[0].Entries[0].Subtasks[0].ID != 12 {
+		t.Fatalf("newest day = %+v", days[0])
 	}
-	if days[1].Tasks[0].Title != "ontem" {
-		t.Fatalf("16/09 first = %s", days[1].Tasks[0].Title)
+	if !sameDay(days[1].Date, dayA) || days[1].Entries[0].Subtasks[0].ID != 11 {
+		t.Fatalf("older day = %+v", days[1])
 	}
+}
+
+func TestGroupCompletedActivityByDayParentCompletionDayKeepsOnlyThatDaySubs(t *testing.T) {
+	loc := time.Local
+	dayA := time.Date(2026, 9, 18, 10, 0, 0, 0, loc)
+	dayC := time.Date(2026, 9, 20, 15, 0, 0, 0, loc)
+	parent := Task{ID: 1, Title: "pai", CompletedAt: &dayC}
+	subA := Task{ID: 11, ParentID: ptrInt64(1), Title: "a", CompletedAt: &dayA}
+	subC := Task{ID: 12, ParentID: ptrInt64(1), Title: "c", CompletedAt: &dayC}
+
+	days := GroupCompletedActivityByDay([]Task{parent}, map[int64][]Task{1: {subA, subC}}, loc)
+	if len(days) != 2 {
+		t.Fatalf("days = %d, want 2", len(days))
+	}
+	var dayCEntry CompletedDayEntry
+	for _, day := range days {
+		if sameDay(day.Date, dayC) {
+			dayCEntry = day.Entries[0]
+		}
+	}
+	if dayCEntry.Parent.CompletedAt == nil || len(dayCEntry.Subtasks) != 1 || dayCEntry.Subtasks[0].ID != 12 {
+		t.Fatalf("day C entry = %+v", dayCEntry)
+	}
+}
+
+func sameDay(left, right time.Time) bool {
+	y1, m1, d1 := left.Date()
+	y2, m2, d2 := right.Date()
+	return y1 == y2 && m1 == m2 && d1 == d2
+}
+
+func ptrInt64(value int64) *int64 {
+	return &value
 }

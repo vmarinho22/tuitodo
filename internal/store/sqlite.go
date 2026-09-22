@@ -304,7 +304,13 @@ func (sqliteStore *SQLiteStore) listParentTasks(categoryID *int64, completed boo
 	query := `SELECT id, parent_id, category_id, title, completed_at, created_at FROM tasks WHERE parent_id IS NULL`
 	args := make([]any, 0, 2)
 	if completed {
-		query += ` AND completed_at IS NOT NULL`
+		query += ` AND (
+			completed_at IS NOT NULL
+			OR EXISTS (
+				SELECT 1 FROM tasks AS sub
+				WHERE sub.parent_id = tasks.id AND sub.completed_at IS NOT NULL
+			)
+		)`
 	} else {
 		query += ` AND completed_at IS NULL`
 	}
@@ -313,7 +319,10 @@ func (sqliteStore *SQLiteStore) listParentTasks(categoryID *int64, completed boo
 		args = append(args, *categoryID)
 	}
 	if completed {
-		query += ` ORDER BY completed_at DESC`
+		query += ` ORDER BY COALESCE(
+			completed_at,
+			(SELECT MAX(sub.completed_at) FROM tasks AS sub WHERE sub.parent_id = tasks.id)
+		) DESC`
 	} else {
 		query += ` ORDER BY created_at`
 	}

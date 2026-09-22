@@ -467,7 +467,16 @@ func (app *App) refreshTaskList(parentTasks []domain.Task) {
 	app.completedDays = nil
 
 	if app.showingCompleted {
-		app.completedDays = domain.GroupParentTasksByCompletedDay(parentTasks, time.Local)
+		subtasksByParent := make(map[int64][]domain.Task, len(parentTasks))
+		for _, parentTask := range parentTasks {
+			subtasks, err := app.taskRepository.SubtasksByParentID(parentTask.ID)
+			if err != nil {
+				app.showError(err)
+				return
+			}
+			subtasksByParent[parentTask.ID] = subtasks
+		}
+		app.completedDays = domain.GroupCompletedActivityByDay(parentTasks, subtasksByParent, time.Local)
 		for _, day := range app.completedDays {
 			app.taskListEntries = append(app.taskListEntries, taskListEntry{isDayHeader: true, day: day.Date})
 			app.taskList.AddItem(app.catalog.FormatDate(day.Date), "", 0, nil)
@@ -641,16 +650,7 @@ func (app *App) refreshCompletedDayDetail() {
 		return
 	}
 	app.parentTitle.SetText(app.catalog.FormatDate(day.Date))
-	subtasksByParent := make(map[int64][]domain.Task, len(day.Tasks))
-	for _, parentTask := range day.Tasks {
-		subtasks, err := app.taskRepository.SubtasksByParentID(parentTask.ID)
-		if err != nil {
-			app.showError(err)
-			return
-		}
-		subtasksByParent[parentTask.ID] = subtasks
-	}
-	for _, line := range buildCompletedDayLines(day, subtasksByParent, app.catalog.FormatTime) {
+	for _, line := range buildCompletedDayLines(day, app.catalog.FormatTime) {
 		app.detailEntries = append(app.detailEntries, detailEntry{isParent: line.isParent, task: line.task})
 		app.detailList.AddItem(line.label, "", 0, nil)
 	}
@@ -674,15 +674,15 @@ type completedDayLine struct {
 	task     domain.Task
 }
 
-func buildCompletedDayLines(day domain.CompletedDay, subtasksByParent map[int64][]domain.Task, formatTime func(time.Time) string) []completedDayLine {
+func buildCompletedDayLines(day domain.CompletedDay, formatTime func(time.Time) string) []completedDayLine {
 	lines := make([]completedDayLine, 0)
-	for _, parentTask := range day.Tasks {
+	for _, entry := range day.Entries {
 		lines = append(lines, completedDayLine{
 			isParent: true,
-			label:    completedParentLabel(parentTask, formatTime),
-			task:     parentTask,
+			label:    completedParentLabel(day.Date, entry.Parent, formatTime),
+			task:     entry.Parent,
 		})
-		for _, subtask := range subtasksByParent[parentTask.ID] {
+		for _, subtask := range entry.Subtasks {
 			lines = append(lines, completedDayLine{
 				label: completedSubtaskLabel(subtask),
 				task:  subtask,
@@ -699,8 +699,8 @@ func parentDetailTitle(categoryName, title string) string {
 	return "[" + categoryName + "] " + title
 }
 
-func completedParentLabel(task domain.Task, formatTime func(time.Time) string) string {
-	if task.CompletedAt == nil {
+func completedParentLabel(day time.Time, task domain.Task, formatTime func(time.Time) string) string {
+	if task.CompletedAt == nil || !sameCalendarDay(task.CompletedAt.In(day.Location()), day) {
 		return task.Title
 	}
 	return formatTime(task.CompletedAt.Local()) + "  " + task.Title
